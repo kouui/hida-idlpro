@@ -44,7 +44,7 @@ END
 FUNCTION SELECT_PROFILE_RANGE, wid, xdata
 
     ss = size(xdata)
-    if not ss[0] eq 1 then throw_error, "ndim of xdata !=1"
+    if ss[0] ne 1 then throw_error, "ndim of xdata !=1"
 
     wset, wid
     plot, [0,1], [0,1]
@@ -60,7 +60,7 @@ END
 FUNCTION ARRAY1D_FIND_NEAREST, array, target, value=value
 
     ss = size(array)
-    if not ss[0] eq 1 then throw_error, "ndim of array !=1"
+    if ss[0] ne 1 then throw_error, "ndim of array !=1"
     
     value = min( abs(array-target), pos )
     
@@ -113,9 +113,9 @@ END
 FUNCTION INTERP_PROFILE, s4, xls, xcs, spil=spil, spic=spic
 
     ss = size(s4)
-    if not ss[0] eq 4 then throw_error, "ndim of s4 !=4"
-    if not ss[3] eq 4 then throw_error, "size of the 3rd dimension of s4 !=4"
-    if not ss[4] eq 1 then throw_error, "size of the 4th dimension of s4 !=1"
+    if  ss[0] ne 4 then throw_error, "ndim of s4 !=4"
+    if  ss[3] ne 4 then throw_error, "size of the 3rd dimension of s4 !=4"
+    if  ss[4] ne 1 then throw_error, "size of the 4th dimension of s4 !=1"
     nx = ss[1]
     ny = ss[2]
     xdata = indgen(ny)
@@ -149,7 +149,7 @@ END
 FUNCTION MAKE_HALF_ARRAY, spil
     
     ss = size(spil)
-    if not ss[0] eq 4 then throw_error, "ndim of spil !=4"
+    if ss[0] ne 4 then throw_error, "ndim of spil !=4"
     npoints = ss[2]
     npoints_half = (npoints-1) / 2
     
@@ -171,7 +171,6 @@ END
 ;; half arr, (nx,npoints,3,2,nseq), 3 : Q,U,V, 2 : line,continuum
 ;; weight array given spil
 FUNCTION MAKE_WEIGHT_ARRAY, spil, wtQ=wtQ, wtU=wtU, wtV=wtV, wtL=wtL, wtC=wtC
-    
     if not keyword_set(wtQ) then wtQ = 1.0
     if not keyword_set(wtU) then wtU = 1.0
     if not keyword_set(wtV) then wtV = 1.0
@@ -203,15 +202,15 @@ FUNCTION MAKE_RESULT_ARRAY, spil, spic, target=target, zero_netV = zero_netV, fl
     ss = size(arr) & nph = ss[2] & nx = ss[1] & nseq = ss[5]
     ;; Line : Q, U, symmetry
     for i=0,1 do begin
-        arr[*,*,i,0,*] = spil[*,0:nph-1,i+1,*] - reverse(spil[*,nph+1:2*nph,i+1,*],3)
+        arr[*,*,i,0,*] = spil[*,0:nph-1,i+1,*] + reverse(spil[*,nph+1:2*nph,i+1,*],2)
     endfor
     ;; Line : V, anti-symmetry
-    arr[*,*,2,0,*] = spil[*,0:nph-1,3,*] + reverse(spil[*,nph+1:2*nph,3*],3)
+    arr[*,*,2,0,*] = spil[*,0:nph-1,3,*] + reverse(spil[*,nph+1:2*nph,3,*],2)
     if not keyword_set(zero_netV) then arr[*,*,2,0,*] -= spil[*,nph,3,*]
 
     ;; Continuum : zero
     for i=0,2 do begin
-        arr[*,*,i,1,*] = 0.5*(spic[*,0:nph-1,i+1,*] + spic[*,nph+1:2*nph,i+1,*])
+        arr[*,*,i,1,*] = 0.5*(spic[*,0:nph-1,i+1,*] - spic[*,nph+1:2*nph,i+1,*])
         if keyword_set(flat_cont) then arr[*,*,i,1,*] -= reform(mean(arr[*,*,i,1,*],dimension=2),nx,1,1,1,nseq)
     endfor
 
@@ -278,6 +277,10 @@ FUNCTION MODEL_PARDST, cx, par
     nph = (np-1) / 2
     spmls = fltarr(nx,np,4,ns)
     spmcs = fltarr(nx,np,4,ns)
+    if ns eq 1 then begin
+        spmls = reform(spmls,nx,np,4,ns,/overwrite)
+        spmcs = reform(spmcs,nx,np,4,ns,/overwrite)
+    endif
 
     for i=0,ns-1 do begin
         dst = dst3c[i]
@@ -285,7 +288,6 @@ FUNCTION MODEL_PARDST, cx, par
         spmls[*,*,*,i] = UPDATE_S3(reform(spils[*,*,*,i],nx,np,nst), mm)
         spmcs[*,*,*,i] = UPDATE_S3(reform(spics[*,*,*,i],nx,np,nst), mm)
     endfor
-
     res = MAKE_RESULT_ARRAY(spmls, spmcs, /zero_netV)
 
 
@@ -297,11 +299,12 @@ END
 ;; dst3, (3, 11, nseq)
 FUNCTION MPFIT_PARDST, conf_symfit, s4, dst3, parinit, parinfo, err, weight, niter=niter, quiet=quiet
     common symfit, spils, spics, dst3c
-    
     dst3c = dst3
     ss = size(s4)
-    if not ss[0] eq 4 then throw_error, "ndim of s4 !=4 (iquv)"
-    
+    if ss[0] ne 4 then begin
+    if ss[0] eq 3 then s4 = reform(s4,ss[1],ss[2],ss[3],1,/overwrite) else throw_error, "ndim of s4 == ",ss[0]
+    endif
+    ss = size(s4)
     ns = ss[4] & nx = ss[1] & ny = ss[2] & nst = ss[3]
     x0 = nx/2
     ;ret = CALCULATE_FIT_RANGE(460, 445, 120, 110, reform(s4[0,0,*,0]),xls=xls, xcs=xcs)
@@ -311,20 +314,23 @@ FUNCTION MPFIT_PARDST, conf_symfit, s4, dst3, parinit, parinfo, err, weight, nit
     ;nph = (np-1)/2
     spils = fltarr(nx,np,4,ns)
     spics = fltarr(nx,np,4,ns)
+    if ns eq 1 then begin
+        spils = reform(spils,nx,np,4,ns,/overwrite)
+        spics = reform(spics,nx,np,4,ns,/overwrite)
+    endif
     for i=0,ns-1 do begin
-        ret = INTERP_PROFILE(reform(s4[*,*,*,i],nx,ny,nst), xls, xcs, spil=spil, spic=spic)
+        ret = INTERP_PROFILE(reform(s4[*,*,*,i],nx,ny,nst,1), xls, xcs, spil=spil, spic=spic)
         spils[*,*,*,i] = spil[*,*,*,*]
         spics[*,*,*,i] = spic[*,*,*,*]
     endfor
-
+    
     ;vthres = 0.5
     ;nthres = 5
     ;mask  = fltarr(ns,nx)
     ;;for i=0,ns-1 do begin
     ;;endfor
 
-
-    weights = MAKE_WEIGHT_ARRAY(spil,wtQ=weight.wtQ,wtU=weight.wtU,wtV=weight.wtV,wtL=weight.wtL,wtC=weight.wtC)
+    weights = MAKE_WEIGHT_ARRAY(spils,wtQ=weight.wtQ,wtU=weight.wtU,wtV=weight.wtV,wtL=weight.wtL,wtC=weight.wtC)
     
     if not keyword_set(niter) then niter = 20
     if not keyword_set(quiet) then quiet=1b

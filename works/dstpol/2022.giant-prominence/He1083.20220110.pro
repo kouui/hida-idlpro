@@ -24,7 +24,7 @@ nstep = 50						; # of step for 1 scan
 telpos='WEST'						; telescope position
 jf = 35 & ipos = 95 & pmax = 0.05			; spectrum #, pos on slit, max for disp
 
-kind = 'prominence'
+kind = 'sunspot'
 search_offset = 0b
 case kind of 
     'sunspot' : begin 

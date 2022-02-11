@@ -6,7 +6,8 @@
 ;  2022.02.06      u.k.    added th_vs to symfit
 ;  2022.02.06      u.k.    added fix_th_vs. fix_sc to widget, symfit
 ;  2022.02.07      u.k.    pro mmdst_adjust; *.xml configuration file
-;  2022.02.10      u.k.    *xml -> *.conf
+;  2022.02.10      u.k.    *.xml -> *.conf
+;  2022.02.11      u.k.    corrected order of array dimension
 ;------------------------------------------------------------------------
 ;; external dependency
 @mmdst
@@ -173,7 +174,7 @@ END
 
 ;------------------------------------------------------------------------
 function sfunc_mmdst,cx,x
-   common dstpol, pars, wds, wd, dst, telpos, s0, wl, s2, s4, sr, bin, ccc
+   common mmadjust, pars, wds, wd, sdata, pdata
 
 	mm = update_mmdst(dst, telpos, x[0], x[1], x[2], x[3], x[4])
       s11 = update_ss(s0, mm) 
@@ -195,11 +196,12 @@ end
 
 ;------------------------------------------------------------------------
 PRO mmdst_event, ev
-   common dstpol, pars, wds, wd, dst, telpos, s0, wl, s2, s4, sr, bin, ccc
+   common mmadjust, pars, wds, wd, sdata, pdata
    common config, conf
    common wconfig, wid_profile
 
    conf_symfit = conf.sconf
+   bin = conf.bin
 
 	widget_control, ev.id, get_uvalue=value
 
@@ -237,59 +239,56 @@ PRO mmdst_event, ev
 			widget_control, wds.sc,set_value=pars.sc
 			print,'CC=',ccc
 			return
-			end
-	      wd.SFit: begin
-			 ss = size(s4)
-	    		 s_seq = reform(s4, 1, ss[1], ss[2], ss[3])  ;; (nseq,nx,ny,nstokes)
-                    s_seq = s_seq[*,conf_symfit.islit1:conf_symfit.islit2,*,*]
-			 
-                    ss = size(dst)
-    			 dst_seq = reform(dst, 1, ss[1], ss[2]) ;; (nseq, 3, 11)
-                    
-                    telpos_seq = [telpos] ;; (nseq,)
-                        
-                    parinit = [pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, pars.th_vs]
-			 ;;parinit = [0.00300, -0.06286, 0.02500, 0.12566, 0.0]
-                    parinfo = MAKE_PARINFO(parinit[0], parinit[1], parinit[2], parinit[3], parinit[4], parinit[5], conf_symfit)
-                    err = conf_symfit.error
-                    niter = conf_symfit.niter
-                    weight = {weight_struct, wtQ:2.0, wtU:2.0, wtV:1.0, wtL:1.0, wtC:1.0}
-                    pars_fit = MPFIT_PARDST(conf_symfit, s_seq, dst_seq, telpos_seq, parinit, parinfo, err, weight, niter=niter)
-			 ;;pars_fit = TEST_MPFIT_PARDST(s4, dst)
-			 pars.xn = pars_fit[0]
-			 pars.tn = pars_fit[1]
-			 pars.xc = pars_fit[2]
-			 pars.tc = pars_fit[3]
-			 pars.sc = pars_fit[4]
-                    pars.th_vs = pars_fit[5]
-                    widget_control, wds.xn,set_value=pars.xn
-			 widget_control, wds.tn,set_value=pars.tn
-			 widget_control, wds.xc,set_value=pars.xc
-			 widget_control, wds.tc,set_value=pars.tc
-			 widget_control, wds.sc,set_value=pars.sc
-                    widget_control, wds.th_vs,set_value=pars.th_vs
-	            end
+      end
+	   wd.SFit: begin    
+         parinit = [pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, pars.th_vs]
+			;;parinit = [0.00300, -0.06286, 0.02500, 0.12566, 0.0]
+         parinfo = MAKE_PARINFO(parinit[0], parinit[1], parinit[2], parinit[3], parinit[4], parinit[5], conf_symfit)
+         err = conf_symfit.error
+         niter = conf_symfit.niter
+         weight = {weight_struct, wtQ:2.0, wtU:2.0, wtV:1.0, wtL:1.0, wtC:1.0}
+         pars_fit = MPFIT_PARDST(conf_symfit, sdata.s4d[conf_symfit.islit1:conf_symfit.islit2,*,*,*], sdata.dst, parinit, parinfo, err, weight, niter=niter)
+			;;pars_fit = TEST_MPFIT_PARDST(s4, dst)
+			pars.xn = pars_fit[0]
+			pars.tn = pars_fit[1]
+			pars.xc = pars_fit[2]
+			pars.tc = pars_fit[3]
+			pars.sc = pars_fit[4]
+         pars.th_vs = pars_fit[5]
+         widget_control, wds.xn,set_value=pars.xn
+			widget_control, wds.tn,set_value=pars.tn
+			widget_control, wds.xc,set_value=pars.xc
+			widget_control, wds.tc,set_value=pars.tc
+			widget_control, wds.sc,set_value=pars.sc
+         widget_control, wds.th_vs,set_value=pars.th_vs
+	   end
 		wd.Disp: begin
-			mm = update_mmdst(dst, telpos, pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
-			sr = update_ss(s4,mm)
-                   if conf_symfit.corr_Icrtk then begin
-                       yr = [conf_symfit.iobs1,conf_symfit.iobs2]
-                       sr = correct_Icrtk(sr,get_coeffs=get_coeffs,yr=yr)
-                   endif
-			dispiquvr,sr,bin=bin,pmax=pmax,/ialog
-			end
+         nf = n_elements(sdata.dst)
+         step = nf/2
+         for i=0,nf-1 do begin
+            if not ((i mod step) eq 0) then continue
+            mm = update_mmdst(sdata.dst[i], pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
+            sr = update_ss(sdata.s4d[*,*,*,i],mm)
+            if conf_symfit.corr_Icrtk then begin
+               yr = [conf_symfit.iobs1,conf_symfit.iobs2]
+               sr = correct_Icrtk(sr,get_coeffs=get_coeffs,yr=yr)
+               dispiquvr,sr,bin=bin,pmax=pmax,/ialog
+            endif
+         endfor
+         return
+      end
 		wd.Exit: begin
 			WIDGET_CONTROL, /destroy, ev.top
-			end
-            wd.Icrtk: begin
+		end
+      wd.Icrtk: begin
 			val = widget_info(wd.Icrtk,/button_set)
-                   conf_symfit.corr_Icrtk = val
-			end
+         conf_symfit.corr_Icrtk = val
+		end
    	endcase
 	
-	mm = update_mmdst(dst, telpos, pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
-   	s1 = update_ss(s0, mm)
-	update_profile_plots, wl, s1, wid_profile, s0=s0, s2=s2
+	mm = update_mmdst(sdata.dst[0], pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
+   s1 = update_ss(pdata.s2d_origin, mm)
+	update_profile_plots, sdata.wl, s1, wid_profile, s0=pdata.s2d_origin, s2=pdata.s2d_anan
 END
 ;------------------------------------------------------------------------
 ;; widget layout for sliders
@@ -375,9 +374,9 @@ END
 ;; tc = +0.00101
 
 
-PRO mmdst_adjust, path
+;PRO mmdst_adjust, path
 
-common dstpol, pars, wds, wd, dst, telpos, s0, wl, s2, s4, sr, bin, ccc
+common mmadjust, pars, wds, wd, sdata, pdata
 common config, conf
 common wconfig, wid_profile
 
@@ -387,7 +386,7 @@ common wconfig, wid_profile
 ;;-----------------------------------------------------
 ;; variables needed to be modified manually
 
-;path = '/tmp_mnt/home/kouui/idlpro/mmdst/He1083.20220110.mmdst_adjust.conf'
+path = '/tmp_mnt/home/kouui/idlpro/mmdst/He1083.20220110.mmdst_adjust.conf'
 
 ;;-----------------------------------------------------
 ;; read configuration variables from xml
@@ -419,7 +418,7 @@ savfolder = conf.SAVFOLDER
 ;; telpos, string
 
 ;; clear variables
-UNDEFINE,s & UNDEFINE,dst & UNDEFINE,wl & UNDEFINE,telpos
+UNDEFINE,s & UNDEFINE,dst
 
 savfiles = findfile(savfolder + '/*.sav')
 nf = n_elements(savfiles)
@@ -429,55 +428,62 @@ print, "use ", nf, " .sav files for symfit"
 restore, savfiles[0]; read s, dst, wl, telpos
 ss = size(s)
 if not ss[0] eq 3 then throw_error, 's should be a 3d array'
-nx = ss[1] & ny = ss[2] & ns = ss[3]-1
+nx = ss[1] & ny = ss[2] & ns = 4
 sseq   = reform(fltarr(nx,ny,ns,nf),nx,ny,ns,nf)
 sseq[*,*,*,0] = s[*,*,0:3]
-dstseq = reform(uintarr(3,11,nf),3,11,nf)
-dstseq[*,*,0] = dst[*,*]
-telposseq = [telpos]
+dstseq = [dst]
+
 for i=1,nf-1 do begin
    restore, savfiles[i]; read s, dst, wl, telpos
    ss = size(s)
    if not ss[0] eq 3 then throw_error, 's should be a 3d array, savfile= '+savfiles[i]
    sseq[*,*,*,i] = s[*,*,0:3]
-   dstseq[*,*,i] = dst[*,*]
-   telposseq = [telposseq,[telpos]]
+   dstseq = [dstseq,[dst]]
 endfor
-;print, size(sseq)
+
+if not keyword_set(wl) then wl = indgen(ny)
+
 sdata = {symfit_data, $ ; 
 s4d    : sseq, $        ; fltarr, (nx,ny,ns,nf)
 dst    : dstseq, $      ; uintarr, (3,11nf)
-wl     : wl, $          ; wavelength array
-telpos : telposseq $    ; string array, (nf)
+wl     : wl $          ; wavelength array
 }
-UNDEFINE,s & UNDEFINE,dst & UNDEFINE,wl & UNDEFINE,telpos
-UNDEFINE,sseq & UNDEFINE,dstseq & UNDEFINE,telposseq
+UNDEFINE,s & UNDEFINE,dst & UNDEFINE,wl
+UNDEFINE,sseq & UNDEFINE,dstseq
 
 ;restore, savfile
-stop
+
 ;;-----------------------------------------------------
 
-s4 = s[*,*,0:3] ;; iquv
-UNDEFINE, s
-if xpos eq -1 then xpos = select_xpos(s4, pmax=0.01, wid=11, bin=bin, /islabel)
-s0 = s4[xpos,*,*] ;; iquv at a single x position
+;s4 = s[*,*,0:3] ;; iquv
+s3d = sdata.s4d[*,*,*,0]
+if xpos eq -1 then xpos = select_xpos(s3d, pmax=0.01, wid=11, bin=bin, /islabel)
+s2d = s3d[xpos,*,*] ;; iquv at a single x position
 
 ;; initialize
-pars_anan = par_dst(wl0, telpos)
+pars_anan = par_dst(wl0, sdata.dst[0].pos)
 ;;print,pars_anan
 
 pars = {mmdst_pars, th_vs:0.0, sc:0.0, xn:pars_anan.xn, tn:pars_anan.tn, xc:pars_anan.xc, tc:pars_anan.tc}
-mm = update_mmdst(dst, telpos, pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
-s1 = update_ss(s0, mm)
-s2 = s1
+pars_init = pars
+
+mm = update_mmdst(sdata.dst[0], pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
+s2d_anan = update_ss(s2d, mm)
+
+pdata = {plot_data, s2d_origin:s2d, s2d_anan:s2d_anan}
+
 wid_profile = 12
-update_profile_plots,wl,s1,wid_profile,s0=s0,s2=s2,/init
+update_profile_plots,sdata.wl,s2d_anan,wid_profile,s0=s2d,s2=s2d_anan,/init
 ;stop
 
 UNDEFINE, mm
-UNDEFINE, s1
+UNDEFINE, s3d
+UNDEFINE, s2d
+UNDEFINE, s2d_anan
 
-base = WIDGET_BASE(title='MMDST', /column)
+
+
+base = WIDGET_BASE(title='MMDST_ADJUST', /column)
 wds = slider_widget(base, pars, conf_symfit)
 wd = {main_wd, $
    Icrtk: 0l, $
@@ -498,5 +504,5 @@ wd.Exit = widget_button(b1, value="Exit", uvalue = "Exit")
 widget_control, base, /realize
 ;;ret = SELECT_PROFILE_RANGE(wid_profile,wl)
 XMANAGER, 'mmdst', base
-stop
+
 END

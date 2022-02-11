@@ -202,7 +202,7 @@ FUNCTION MAKE_RESULT_ARRAY, spil, spic, target=target, zero_netV = zero_netV, fl
     ss = size(arr) & nph = ss[2] & nx = ss[1] & nseq = ss[5]
     ;; Line : Q, U, symmetry
     for i=0,1 do begin
-        arr[*,*,i,0,*] = spil[*,0:nph-1,i+1,*] + reverse(spil[*,nph+1:2*nph,i+1,*],2)
+        arr[*,*,i,0,*] = spil[*,0:nph-1,i+1,*] - reverse(spil[*,nph+1:2*nph,i+1,*],2)
     endfor
     ;; Line : V, anti-symmetry
     arr[*,*,2,0,*] = spil[*,0:nph-1,3,*] + reverse(spil[*,nph+1:2*nph,3,*],2)
@@ -210,7 +210,7 @@ FUNCTION MAKE_RESULT_ARRAY, spil, spic, target=target, zero_netV = zero_netV, fl
 
     ;; Continuum : zero
     for i=0,2 do begin
-        arr[*,*,i,1,*] = 0.5*(spic[*,0:nph-1,i+1,*] - spic[*,nph+1:2*nph,i+1,*])
+        arr[*,*,i,1,*] = 0.5*(spic[*,0:nph-1,i+1,*] + spic[*,nph+1:2*nph,i+1,*])
         if keyword_set(flat_cont) then arr[*,*,i,1,*] -= reform(mean(arr[*,*,i,1,*],dimension=2),nx,1,1,1,nseq)
     endfor
 

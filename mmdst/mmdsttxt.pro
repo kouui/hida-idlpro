@@ -57,6 +57,7 @@ END
 
 FUNCTION MMDST_ADJUST_TXT_READ, file
 
+if keyword_set(file) then begin
     OPENR, lun, file, /GET_LUN
     ; Read one line at a time, saving the result into array
     data = []
@@ -78,27 +79,65 @@ FUNCTION MMDST_ADJUST_TXT_READ, file
     ; Close the file and free the file unit
     FREE_LUN, lun
 
+    iedgeL = MMDST_ADJUST_TXT_SELECT(data, 'iedgeL')
+    icentL = MMDST_ADJUST_TXT_SELECT(data, 'icentL')
+    iedgeC = MMDST_ADJUST_TXT_SELECT(data, 'iedgeC')
+    icentC = MMDST_ADJUST_TXT_SELECT(data, 'icentC')
+    islit1 = MMDST_ADJUST_TXT_SELECT(data, 'islit1')
+    islit2 = MMDST_ADJUST_TXT_SELECT(data, 'islit2')
+    iobs1  = MMDST_ADJUST_TXT_SELECT(data, 'iobs1')
+    iobs2  = MMDST_ADJUST_TXT_SELECT(data, 'iobs2')
+    error  = MMDST_ADJUST_TXT_SELECT(data, 'error')
+    niter  = MMDST_ADJUST_TXT_SELECT(data, 'niter')
+    fix_sc = MMDST_ADJUST_TXT_SELECT(data, 'fix_sc')
+    fix_th_vs = MMDST_ADJUST_TXT_SELECT(data, 'fix_th_vs')
+    corr_Icrtk= MMDST_ADJUST_TXT_SELECT(data, 'corr_Icrtk')
+    
+    wl0 = MMDST_ADJUST_TXT_SELECT(data, 'wl0')
+    bin = MMDST_ADJUST_TXT_SELECT(data, 'bin')
+    savfolder = MMDST_ADJUST_TXT_SELECT(data, 'savfolder')
+    xpos = MMDST_ADJUST_TXT_SELECT(data, 'xpos')
+endif else begin
+    iedgeL = -1
+    icentL = -1
+    iedgeC = -1
+    icentC = -1
+    islit1 = -1
+    islit2 = -1
+    iobs1  = -1
+    iobs2  = -1
+    error  = 2E-4
+    niter  = 20
+    fix_sc = 1b
+    fix_th_vs = 0b
+    corr_Icrtk= 1b
+    
+    wl0 = -1
+    bin = 1
+    savfolder = ''
+    xpos = -1
+endelse
     sconf = {symfit_struct,$
-    iedgeL : MMDST_ADJUST_TXT_SELECT(data, 'iedgeL'), $
-    icentL : MMDST_ADJUST_TXT_SELECT(data, 'icentL'), $
-    iedgeC : MMDST_ADJUST_TXT_SELECT(data, 'iedgeC'), $
-    icentC : MMDST_ADJUST_TXT_SELECT(data, 'icentC'), $
-    islit1 : MMDST_ADJUST_TXT_SELECT(data, 'islit1'), $
-    islit2 : MMDST_ADJUST_TXT_SELECT(data, 'islit2'), $
-    iobs1  : MMDST_ADJUST_TXT_SELECT(data, 'iobs1'), $
-    iobs2  : MMDST_ADJUST_TXT_SELECT(data, 'iobs2'), $
-    error  : MMDST_ADJUST_TXT_SELECT(data, 'error'), $
-    niter  : MMDST_ADJUST_TXT_SELECT(data, 'niter'), $
-    fix_sc : MMDST_ADJUST_TXT_SELECT(data, 'fix_sc'), $
-    fix_th_vs : MMDST_ADJUST_TXT_SELECT(data, 'fix_th_vs'), $
-    corr_Icrtk: MMDST_ADJUST_TXT_SELECT(data, 'corr_Icrtk') $
+    iedgeL : iedgeL, $
+    icentL : icentL, $
+    iedgeC : iedgeC, $
+    icentC : icentC, $
+    islit1 : islit1, $
+    islit2 : islit2, $
+    iobs1  : iobs1, $
+    iobs2  : iobs2, $
+    error  : error, $
+    niter  : niter, $
+    fix_sc : fix_sc, $
+    fix_th_vs : fix_th_vs, $
+    corr_Icrtk: corr_Icrtk $
     }
 
     conf = {mmdst_adjust_configuration, $
-    wl0      : MMDST_ADJUST_TXT_SELECT(data, 'wl0'), $
-    bin      : MMDST_ADJUST_TXT_SELECT(data, 'bin'), $
-    savfolder: MMDST_ADJUST_TXT_SELECT(data, 'savfolder'), $
-    xpos     : MMDST_ADJUST_TXT_SELECT(data, 'xpos'), $
+    wl0      : wl0, $
+    bin      : bin, $
+    savfolder: savfolder, $
+    xpos     : xpos, $
     sconf    : sconf $ 
     }
     

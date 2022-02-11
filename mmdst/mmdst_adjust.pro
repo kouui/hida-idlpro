@@ -206,9 +206,9 @@ PRO mmdst_event, ev
 	widget_control, ev.id, get_uvalue=value
 
    	case (ev.id) of
-            wds.fix_th_vs: conf_symfit.fix_th_vs =  widget_info(wds.fix_th_vs,/button_set)
-            wds.fix_sc: conf_symfit.fix_sc =  widget_info(wds.fix_sc,/button_set)
-            wds.th_vs : pars.th_vs = gt_wdtxt(ev.id)
+      wds.fix_th_vs: conf.sconf.fix_th_vs =  widget_info(wds.fix_th_vs,/button_set)
+      wds.fix_sc: conf.sconf.fix_sc =  widget_info(wds.fix_sc,/button_set)
+      wds.th_vs : pars.th_vs = gt_wdtxt(ev.id)
 		wds.sc : pars.sc = gt_wdtxt(ev.id)
 		wds.xn : pars.xn = gt_wdtxt(ev.id)
 		wds.tn : pars.tn = gt_wdtxt(ev.id)
@@ -266,14 +266,14 @@ PRO mmdst_event, ev
          nf = n_elements(sdata.dst)
          step = nf/2
          for i=0,nf-1 do begin
-            if not ((i mod step) eq 0) then continue
+            if (i mod step) ne 0 then continue
             mm = update_mmdst(sdata.dst[i], pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
             sr = update_ss(sdata.s4d[*,*,*,i],mm)
             if conf_symfit.corr_Icrtk then begin
                yr = [conf_symfit.iobs1,conf_symfit.iobs2]
                sr = correct_Icrtk(sr,get_coeffs=get_coeffs,yr=yr)
-               dispiquvr,sr,bin=bin,pmax=pmax,/ialog
             endif
+            dispiquvr,sr,bin=bin,pmax=0.03,/ialog
          endfor
          return
       end
@@ -282,7 +282,7 @@ PRO mmdst_event, ev
 		end
       wd.Icrtk: begin
 			val = widget_info(wd.Icrtk,/button_set)
-         conf_symfit.corr_Icrtk = val
+         conf.sconf.corr_Icrtk = val
 		end
    	endcase
 	
@@ -373,8 +373,8 @@ END
 ;; xc = -0.01423
 ;; tc = +0.00101
 
-
-;PRO mmdst_adjust, path
+;FUNCTION mmdst_adjust, s, dst, wl0, bin=bin, path=path
+;PRO mmdst_adjust, path, 
 
 common mmadjust, pars, wds, wd, sdata, pdata
 common config, conf
@@ -387,26 +387,18 @@ common wconfig, wid_profile
 ;; variables needed to be modified manually
 
 path = '/tmp_mnt/home/kouui/idlpro/mmdst/He1083.20220110.mmdst_adjust.conf'
-
+;UNDEFINE,path
 ;;-----------------------------------------------------
-;; read configuration variables from xml
+;; read configuration variables from txt
 conf = MMDST_ADJUST_TXT_READ(path)
+
+if keyword_set(path) then begin
+
 bin = conf.bin
 wl0 = conf.wl0
 conf_symfit = conf.sconf
 xpos = conf.xpos;  xpos to extract 1D IQUV profiles. if eq -1, then select xpos with cursor click
 savfolder = conf.SAVFOLDER
-
-;; wavelength in Angstrom to interpolate initial mmdst parameters
-;wl0 = 5893.
-;wl0 = 10830
-;telpos = 'WEST'
-;bin = 1
-;; s, (nxp,nyp,>4), iquv[r...] after demodulation
-;; dst, (3,11), dst status
-;; wl, (nxy,), wavelength in Angstrom
-;; telpos, string
-;savfile = '/nwork/kouui/data-lvl1/dstpol/20220110.giant-prominence/spec/cal/step5.s.ar.sav'
 
 ;;-----------------------------------------------------
 
@@ -414,8 +406,6 @@ savfolder = conf.SAVFOLDER
 ;; in the *.sav file :
 ;; s, (nxp,nyp,>4), iquv[r...] after demodulation
 ;; dst, (3,11), dst status
-;; wl, (nxy,), wavelength in Angstrom
-;; telpos, string
 
 ;; clear variables
 UNDEFINE,s & UNDEFINE,dst
@@ -441,6 +431,14 @@ for i=1,nf-1 do begin
    dstseq = [dstseq,[dst]]
 endfor
 
+endif else begin
+ss = size(s)
+if ss[0] ne 3 then throw_error, 's has ndim != 3'
+conf.wl0 = wl0
+if keyword_set(bin) then conf.bin=bin else conf.bin=1
+sseq = reform(s, ss[1],ss[2],ss[3],1)
+dstseq = [dst]
+endelse
 if not keyword_set(wl) then wl = indgen(ny)
 
 sdata = {symfit_data, $ ; 
@@ -457,8 +455,8 @@ UNDEFINE,sseq & UNDEFINE,dstseq
 
 ;s4 = s[*,*,0:3] ;; iquv
 s3d = sdata.s4d[*,*,*,0]
-if xpos eq -1 then xpos = select_xpos(s3d, pmax=0.01, wid=11, bin=bin, /islabel)
-s2d = s3d[xpos,*,*] ;; iquv at a single x position
+if conf.xpos eq -1 then conf.xpos = select_xpos(s3d, pmax=0.01, wid=11, bin=bin, /islabel)
+s2d = s3d[conf.xpos,*,*] ;; iquv at a single x position
 
 ;; initialize
 pars_anan = par_dst(wl0, sdata.dst[0].pos)
@@ -504,5 +502,7 @@ wd.Exit = widget_button(b1, value="Exit", uvalue = "Exit")
 widget_control, base, /realize
 ;;ret = SELECT_PROFILE_RANGE(wid_profile,wl)
 XMANAGER, 'mmdst', base
+
+;return, {mmdst_adjust_struct, conf:conf, pars:pars, pars_init:pars_init}
 
 END

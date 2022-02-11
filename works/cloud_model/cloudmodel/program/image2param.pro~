@@ -1,0 +1,111 @@
+function image2param,cont,wl,bg,thr=thr
+
+;+
+;Name:
+;       IMAGE2PARAM
+;
+;Purpose:
+;       Convert set of images to parameter maps using Beckers' cloud model.
+;
+;Calling Sequence:
+;       Parameter=image2param(cont,wl,[bg],[thr=thr])
+;
+;Input Parameters:
+;       cont - Set of contrasts map observed in more than 4 wavelengths.
+;       wl   - Wavelengths corresponding to cont.
+;	       Expressed in difference from H alpha center (6562.808 Angstrom).
+;       bg   - Background intensity corresponding to wl.
+;              Normalized by continuum. (can be omitted.)
+;	thr  - Threshold value which determines background regions.
+;	       A point (x,y) where total(cont(x,y,*)^2) lt thr then
+;              (x,y) is considered background.
+;
+;Output:
+;	An matrix which size of 1st and 2nd dimensions are equal to cont.
+;	3rd dimension has 5 elements and each of them represent the follows,
+;		z=0 : Source function
+;		z=1 : Optical depth
+;		z=2 : Doppler width
+;		z=3 : Doppler shift
+;		z=4 : Error sum of squares
+;
+;Keywords:
+;       Nane.
+;
+;History:
+;       Written 25 Jan 2007, K. Otsuji
+;-
+
+;cont=(prep_5img(data))(10:309,10:309,*)
+;wl=cindex.WAVE_D$F
+
+ss=size(cont,/dim)
+xs=ss(0)
+ys=ss(1)
+ws=ss(2)
+
+if not isvalid(bg) then begin
+    case 1 of
+        max(abs(wl)) le 2.:aaa=double(rd_tfile('~/idl_data/ref_Ha_filter_100.dat',2))
+        max(abs(wl)) le 4.:aaa=double(rd_tfile('~/idl_data/ref_Ha_filter_200.dat',2))
+    endcase
+    aaa(0,*)=aaa(0,*)-6562.808
+    bg=rebin(reform(interpol(aaa(1,*),aaa(0,*),wl),1,1,ws), $
+             xs,ys,ws)
+endif
+
+if not isvalid(thr) then thr=0.005
+
+common share1,wl1,bg1
+wl1=wl
+
+ref0=total(cont^2,3)
+xy=where(ref0 ge thr,nn)
+
+;ref0=cont*0
+;ref0(*,*,0)=cont(*,*,0) lt -0.04
+;ref0(*,*,1)=cont(*,*,1) lt -0.04
+;ref0(*,*,2)=cont(*,*,2) lt +0.02
+;ref0(*,*,3)=cont(*,*,3) lt -0.04
+;ref0(*,*,4)=cont(*,*,4) lt -0.04
+;ref1=total(ref0,3)
+;xy=where(ref1 ge 2,nn)
+
+x=xy mod xs
+y=xy  /  ys
+
+pin0=[0.2,0.2,0.3,0.0]
+pp=fltarr(xs,ys,5)
+w=replicate(!values.f_infinity,xs,ys)
+w0=0.0002
+
+wdef,0,512,512
+ct_doppler
+
+for i=long(0),nn-1 do begin
+    if i mod 1000 eq 0 then begin
+        print,strtrim(i,2)+'/'+strtrim(nn-1,2)
+        plot_image,pp(*,*,3),min=-0.5,max=0.5,bot=1,top=254
+    endif
+
+    ref1=pp(x(i)-2>0:x(i)+2<(xs-1),y(i)-2>0:y(i),0:3)
+    s=size(ref1)
+    ref2=[transpose(pin0),reform(ref1,s(1)*s(2),s(3))]
+    w1=w(x(i)-2>0:x(i)+2<(xs-1),y(i)-2>0:y(i))
+    w2=[w0,reform(w1,s(1)*s(2))]
+    j=where(finite(w2) eq 1)
+    ref2=ref2(j,*)
+    w2=w2(j)
+    pin=total(ref2##diag_matrix(w0/w2),1)/total(w0/w2,1)
+    bg1=reform(bg(x(i),y(i),*))
+    pp(x(i),y(i),0:3)=hybrid('cloudmodel',cont(x(i),y(i),*),pin, $
+                             Smin=1e-7,Sfin=Sfin,itmax=30,/silent)
+    pp(x(i),y(i),4)=Sfin
+    w(x(i),y(i))=Sfin
+
+endfor
+
+return,pp
+
+end
+

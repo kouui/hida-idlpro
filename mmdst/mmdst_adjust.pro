@@ -34,21 +34,6 @@
 ;END
 
 ;------------------------------------------------------------------------
-;; UPDATE ss[*,*,4]
-;; ss (nx, ny, 4), 4 : I,Q,U,V
-FUNCTION update_ss, ss, mm
-   
-   rmm = invert(mm)
-   imgsize,ss,nx,ny,n4
-   sr = fltarr(nx,ny,n4)
-   for j=0,3 do begin
-		sr[*,*,j] = rmm[0,j]*ss[*,*,0]
-		for i=1,3 do sr[*,*,j] = sr[*,*,j] + rmm[i,j]*ss[*,*,i]
-	endfor
-   return, sr
-END
-
-;------------------------------------------------------------------------
 ;; UPDATE PROFILE PLOTS
 ;; profs (1, npix_y, 4)
 PRO update_profile_plots, wl, profs, wid, init=init, s0=s0, s2=s2
@@ -173,12 +158,13 @@ FUNCTION select_xpos, s4, pmax=pmax, bin=bin, wid=wid, ialog=ialog, islabel=isla
 END
 
 ;------------------------------------------------------------------------
+;[bug not yet fixed]
 function sfunc_mmdst,cx,x
    common mmadjust, pars, wds, wd, sdata, pdata
 
 	mm = update_mmdst(dst, telpos, x[0], x[1], x[2], x[3], x[4])
-      s11 = update_ss(s0, mm) 
-   	s1 = update_ss(s4[*,80:180,*], mm)
+      s11 = UPDATE_S3(s0, mm) 
+   	s1 = UPDATE_S3(s4[*,80:180,*], mm)
 	update_profile_plots, wl, s11, 12, s0=s0, s2=s2
 
 	;s1 = s1[*,600:900,*]
@@ -268,7 +254,7 @@ PRO mmdst_event, ev
          for i=0,nf-1 do begin
             if (i mod step) ne 0 then continue
             mm = update_mmdst(sdata.dst[i], pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
-            sr = update_ss(sdata.s4d[*,*,*,i],mm)
+            sr = UPDATE_S3(sdata.s4d[*,*,*,i],mm)
             if conf_symfit.corr_Icrtk then begin
                yr = [conf_symfit.iobs1,conf_symfit.iobs2]
                sr = correct_Icrtk(sr,get_coeffs=get_coeffs,yr=yr)
@@ -287,7 +273,7 @@ PRO mmdst_event, ev
    	endcase
 	
 	mm = update_mmdst(sdata.dst[0], pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
-   s1 = update_ss(pdata.s2d_origin, mm)
+   s1 = UPDATE_S3(pdata.s2d_origin, mm)
 	update_profile_plots, sdata.wl, s1, wid_profile, s0=pdata.s2d_origin, s2=pdata.s2d_anan
 END
 ;------------------------------------------------------------------------
@@ -373,7 +359,7 @@ END
 ;; xc = -0.01423
 ;; tc = +0.00101
 
-;FUNCTION mmdst_adjust, s, dst, wl0, bin=bin, path=path
+FUNCTION mmdst_adjust, s, dst, wl0, bin=bin, sconf=sconf, path=path
 ;PRO mmdst_adjust, path, 
 
 common mmadjust, pars, wds, wd, sdata, pdata
@@ -386,7 +372,7 @@ common wconfig, wid_profile
 ;;-----------------------------------------------------
 ;; variables needed to be modified manually
 
-path = '/tmp_mnt/home/kouui/idlpro/mmdst/He1083.20220110.mmdst_adjust.conf'
+;path = '/tmp_mnt/home/kouui/idlpro/mmdst/He1083.20220110.mmdst_adjust.conf'
 ;UNDEFINE,path
 ;;-----------------------------------------------------
 ;; read configuration variables from txt
@@ -439,17 +425,23 @@ if keyword_set(bin) then conf.bin=bin else conf.bin=1
 sseq = reform(s, ss[1],ss[2],ss[3],1)
 dstseq = [dst]
 endelse
-if not keyword_set(wl) then wl = indgen(ny)
+ss = size(sseq)
+if not keyword_set(wl) then wl = indgen(ss[2])
 
 sdata = {symfit_data, $ ; 
 s4d    : sseq, $        ; fltarr, (nx,ny,ns,nf)
 dst    : dstseq, $      ; uintarr, (3,11nf)
 wl     : wl $          ; wavelength array
 }
-UNDEFINE,s & UNDEFINE,dst & UNDEFINE,wl
+UNDEFINE,s & UNDEFINE,dst & UNDEFINE,wl & UNDEFINE,ss
 UNDEFINE,sseq & UNDEFINE,dstseq
 
 ;restore, savfile
+;;-----------------------------------------------------
+;if keyword_set(sconf) then conf.sconf = sconf
+;sconf = conf.sconf
+;if (sconf.iedgeL eq 0) or (sconf.icentL eq 0) then 
+
 
 ;;-----------------------------------------------------
 
@@ -466,7 +458,7 @@ pars = {mmdst_pars, th_vs:0.0, sc:0.0, xn:pars_anan.xn, tn:pars_anan.tn, xc:pars
 pars_init = pars
 
 mm = update_mmdst(sdata.dst[0], pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
-s2d_anan = update_ss(s2d, mm)
+s2d_anan = UPDATE_S3(s2d, mm)
 
 pdata = {plot_data, s2d_origin:s2d, s2d_anan:s2d_anan}
 
@@ -482,7 +474,7 @@ UNDEFINE, s2d_anan
 
 
 base = WIDGET_BASE(title='MMDST_ADJUST', /column)
-wds = slider_widget(base, pars, conf_symfit)
+wds = slider_widget(base, pars, conf.sconf)
 wd = {main_wd, $
    Icrtk: 0l, $
 	Auto:  0l, $	;
@@ -493,7 +485,7 @@ wd = {main_wd, $
 b1 = widget_base(base, /row)
 dmy=widget_base(b1, /row, /NonExclusive)
 wd.Icrtk = Widget_Button(dmy, Value='CorrIcrtk')
-Widget_Control, wd.Icrtk, Set_Button=conf_symfit.corr_Icrtk
+Widget_Control, wd.Icrtk, Set_Button=conf.sconf.corr_Icrtk
 wd.Auto = widget_button(b1, value="Auto", uvalue = "Auto", SENSITIVE = 0)
 wd.SFit = widget_button(b1, value="SFit", uvalue = "SFit")
 wd.Disp = widget_button(b1, value="Disp", uvalue = "Disp")
@@ -503,6 +495,17 @@ widget_control, base, /realize
 ;;ret = SELECT_PROFILE_RANGE(wid_profile,wl)
 XMANAGER, 'mmdst', base
 
-;return, {mmdst_adjust_struct, conf:conf, pars:pars, pars_init:pars_init}
+return, {mmdst_adjust_struct, conf:conf, pars:pars, pars_init:pars_init}
+
+END
+
+
+
+
+file = '/nwork/kouui/data-lvl1/dstpol/20220110.giant-prominence/spec/cal/sav.for-mmdst-adjust'
+file = file + '/step5.s.ar.sav'
+restore, file
+wl0 = 10830
+pcal = mmdst_adjust(s[*,*,0:3], dst, wl0, bin=1)
 
 END

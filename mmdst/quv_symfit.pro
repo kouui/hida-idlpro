@@ -19,8 +19,7 @@
 ; FUNCTION INIT_PARINFO 
 ; FUNCTION MAKE_PARINFO, xn, tn, xc, tc, sc
 ; FUNCTION MODEL_PARDST, cx, par
-; FUNCTION MPFIT_PARDST, s4, dst3, telpos1, parinit, parinfo, err, weight, niter=niter, quiet=quiet
-; FUNCTION TEST_MPFIT_PARDST, s_origin, dst
+; FUNCTION MPFIT_PARDST, s4, dst3, parinit, parinfo, err, weight, niter=niter, quiet=quiet
 
 
 ;; EXTERNAL DEPENDENCY
@@ -347,27 +346,3 @@ FUNCTION MPFIT_PARDST, conf_symfit, s4, dst3, parinit, parinfo, err, weight, nit
 END
 
 ;------------------------------------------------------------------------
-;; xpos = 118
-;; sc = 0.0
-;; xn = +0.00300
-;; tn = -0.06286
-;; xc = +0.02500
-;; tc = +0.12566
-;;[do not use, order of dimemsion not corrected]
-FUNCTION TEST_MPFIT_PARDST, s_origin, dst, conf_symfit
-
-    ss = size(s_origin)
-    s4 = reform(s_origin, 1, ss[1], ss[2], ss[3])
-    s4 = s4[*,80:150,*,*]
-
-    ss = size(dst)
-    dst3 = reform(dst, 1, ss[1], ss[2])
-
-    telpos1 = ['WEST']
-
-    parinit = [0.00300, -0.06286, 0.02500, 0.12566, 0.0]
-    parinfo = MAKE_PARINFO(parinit[0], parinit[1], parinit[2], parinit[3], parinit[4])
-    weight = {weight_struct, wtQ:2.0, wtU:2.0, wtV:1.0, wtL:1.0, wtC:2.0}
-    p = MPFIT_PARDST(conf_symfit, s4, dst3, telpos1, parinit, parinfo, 2E-4, weight, quiet=0b, niter=100)
-    return, p
-END

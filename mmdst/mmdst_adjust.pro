@@ -97,14 +97,17 @@ FUNCTION click_event, wid=wid, msg=msg, data=data
     else cursor,xpos,ypos,/dev,/down
     return, [xpos, ypos]
 END
+
 ;------------------------------------------------------------------------
 ;; SELECT X POS WITH CURSOR
 ;; s4 (npix_x, npix_y, 4), 4 : I,Q,U,V
-FUNCTION select_xpos, s4, pmax=pmax, bin=bin, wid=wid, ialog=ialog, islabel=islabel
+FUNCTION select_xpos, s4, pmax=pmax, bin=bin, wid=wid, ialog=ialog, islabel=islabel, msg_arr=msg_arr
 
    if not keyword_set(wid) then wid=0
    if not keyword_set(pmax) then pmax=0.05
    if not keyword_set(bin) then bin=1
+   if not keyword_set(msg_arr) then msg_arr = ['click left button to select a x posiiton ...']
+   nclick = n_elements(msg_arr)
    coms = ['I', 'Q', 'U', 'V']
 
 	ss = size(s4)
@@ -136,25 +139,32 @@ FUNCTION select_xpos, s4, pmax=pmax, bin=bin, wid=wid, ialog=ialog, islabel=isla
       x0s[j] = x0
    endfor
 
-   ;; click and compute x position
-   pos = click_event(msg="click left button of the mouse to select a x position ...")
-	xpos = pos[0]
+   xpos_arr = []
+   for kk=0,nclick-1 do begin
+      ;; click and compute x position
+      pos = click_event(msg=msg_arr[kk])
+      xpos = pos[0]
 
-   bias = 0
-   for j=0,ns0-1 do begin
-      if right_bounds[j] gt xpos then break
-      bias = bias + (nx+dd)
+      bias = 0
+      for j=0,ns0-1 do begin
+         if right_bounds[j] gt xpos then break
+         bias = bias + (nx+dd)
+      endfor
+
+      xpos = xpos - bias
+      
+   ;;   print, j, xpos
+      for j=0, ns0-1 do begin
+         draw, (x0s[j]+xpos)*[1,1], [dd,dd+ny], color=150, thick=2
+      endfor
+      xpos = xpos*bin
+      print, 'select xpos=', xpos
+      
+      xpos_arr = [xpos_arr,[xpos]]
    endfor
 
-   xpos = xpos - bias
-   
-;;   print, j, xpos
-   for j=0, ns0-1 do begin
-      draw, (x0s[j]+xpos)*[1,1], [dd,dd+ny], color=150, thick=2
-   endfor
-   xpos = xpos*bin
-   print, 'select xpos=', xpos
-   return, xpos
+   if nclick eq 1 then return, xpos_arr[0]
+   return, xpos_arr
 END
 
 ;------------------------------------------------------------------------
@@ -436,20 +446,43 @@ wl     : wl $          ; wavelength array
 UNDEFINE,s & UNDEFINE,dst & UNDEFINE,wl & UNDEFINE,ss
 UNDEFINE,sseq & UNDEFINE,dstseq
 
-;restore, savfile
 ;;-----------------------------------------------------
-;if keyword_set(sconf) then conf.sconf = sconf
-;sconf = conf.sconf
-;if (sconf.iedgeL eq 0) or (sconf.icentL eq 0) then 
-
-
-;;-----------------------------------------------------
-
-;s4 = s[*,*,0:3] ;; iquv
+;; the first dataset for parameter selection
 s3d = sdata.s4d[*,*,*,0]
-if conf.xpos eq -1 then conf.xpos = select_xpos(s3d, pmax=0.01, wid=11, bin=bin, /islabel)
-s2d = s3d[conf.xpos,*,*] ;; iquv at a single x position
+;;-----------------------------------------------------
+;; select islit1, islit2
+if keyword_set(sconf) then conf.sconf = sconf
+names = ['left bound of sunspot', 'right bound of sunspot']
+msg_arr = []
+for i=0,n_elements(names)-1 do msg_arr = [msg_arr,['click left button to select '+names[i]+' ...']]
 
+if (conf.sconf.islit1 eq -1) or (conf.sconf.islit2 eq -1) then begin
+   xpos2 = select_xpos(s3d, pmax=0.01, wid=20, bin=bin, /islabel, msg_arr=msg_arr)
+   if xpos2[0] > xpos2[1] then xpos2 = reverse(xpos2)
+   conf.sconf.islit1 = xpos2[0] & conf.sconf.islit1 = xpos2[1]
+endif
+UNDEFINE, names & UNDEFINE, msg_arr & UNDEFINE, i
+;;-----------------------------------------------------
+;; select xpos
+if conf.xpos eq -1 then conf.xpos = select_xpos(s3d, pmax=0.01, wid=21, bin=bin, /islabel)
+s2d = s3d[conf.xpos,*,*] ;; iquv at a single x position
+stop
+;;-----------------------------------------------------
+;; select iedgeL, icentL, iedgeC, icentC
+
+;;-----------------------------------------------------
+;; set iobs1, iobs2
+if (conf.sconf.iobs1 eq -1) or (conf.sconf.iobs2 eq -1) then begin
+   ss = size(s3d)
+   ny = ss[2]
+   bias = 20
+   conf.sconf.iobs1 = 0+bias
+   conf.sconf.iobs2 = ny-bias
+   UNDEFINE,ss & UNDEFINE,ny & UNDEFINE,bias 
+endif
+
+
+;;-----------------------------------------------------
 ;; initialize
 pars_anan = par_dst(wl0, sdata.dst[0].pos)
 ;;print,pars_anan
@@ -466,10 +499,7 @@ wid_profile = 12
 update_profile_plots,sdata.wl,s2d_anan,wid_profile,s0=s2d,s2=s2d_anan,/init
 ;stop
 
-UNDEFINE, mm
-UNDEFINE, s3d
-UNDEFINE, s2d
-UNDEFINE, s2d_anan
+UNDEFINE, mm & UNDEFINE, s3d & UNDEFINE, s2d & UNDEFINE, s2d_anan
 
 
 

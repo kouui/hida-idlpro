@@ -9,6 +9,7 @@
 ;  2022.02.10      u.k.    *.xml -> *.conf
 ;  2022.02.11      u.k.    corrected order of array dimension
 ;------------------------------------------------------------------------
+;; color reference : https://www.scollabo.com/banban/lectur/websafe.html
 ;; external dependency
 @mmdst
 @dst_pollib
@@ -96,6 +97,57 @@ FUNCTION click_event, wid=wid, msg=msg, data=data
     if keyword_set(data) then cursor,xpos,ypos,/data,/down $
     else cursor,xpos,ypos,/dev,/down
     return, [xpos, ypos]
+END
+;------------------------------------------------------------------------
+;; SELECT y POS WITH CURSOR
+;; s2d (ny, 4), 4 : I,Q,U,V
+FUNCTION select_ypos_profile, s2d, wid=wid, ialog=ialog, msg_arr=msg_arr
+
+   ss = size(s2d) & ny = ss[1]
+   if ss[0] ne 2 then throw_error,'ndim of s2d != 2'
+   if ss[2] ne 4 then throw_error,'size of 2rd dimension != 4 (iquv)'
+
+   
+   if not keyword_set(wid) then wid=0
+   if not keyword_set(msg_arr) then msg_arr = ['click left button to select a x posiiton ...']
+   nclick = n_elements(msg_arr)
+
+   labels = ['I','Q','U','V']
+   colors = ['ffffff'x, '66ff00'x, '9900ff'x, '00ffff'x] ; 'bbggrr'x
+   ;colors = ['White', 'Red', 'Green', 'Yellow']
+
+   window, wid, xs=1200, ys=600
+   i = 0
+   mx = 0.05
+   yr = max(s2d[*,1:3])
+   yr = max(mx,yr)
+   yr = yr*[-1.,+1.]
+   plot, s2d[*,i]*mx, color=colors[i], linestyle=0, yr = yr
+   ;axis, yaxis=1, yr = [min(s2d[*,1:3]),max(s2d[*,1:3])]
+   for i=1,3 do begin
+      oplot, s2d[*,i], color=colors[i], linestyle=0
+   endfor
+
+   for i=0,3 do xyouts,100+50*i,100,labels[i],chars=2.5, color=colors[i], /device
+
+   xpos_arr = []
+   for kk=0,nclick-1 do begin
+      ;; click and compute x position
+      pos = click_event(msg=msg_arr[kk], /data)
+      xpos = fix(pos[0])
+
+      print, 'select xpos=', xpos
+      
+      xpos_arr = [xpos_arr,[xpos]]
+      oplot,[xpos], [s2d[xpos,0]*mx], color=colors[0], psym=5, thick=4
+   endfor
+
+
+
+   if nclick eq 1 then return, xpos_arr[0]
+   return, xpos_arr
+
+
 END
 
 ;------------------------------------------------------------------------
@@ -243,6 +295,7 @@ PRO mmdst_event, ev
          err = conf_symfit.error
          niter = conf_symfit.niter
          weight = {weight_struct, wtQ:2.0, wtU:2.0, wtV:1.0, wtL:1.0, wtC:1.0}
+         ;stop
          pars_fit = MPFIT_PARDST(conf_symfit, sdata.s4d[conf_symfit.islit1:conf_symfit.islit2,*,*,*], sdata.dst, parinit, parinfo, err, weight, niter=niter)
 			;;pars_fit = TEST_MPFIT_PARDST(s4, dst)
 			pars.xn = pars_fit[0]
@@ -449,6 +502,9 @@ UNDEFINE,sseq & UNDEFINE,dstseq
 ;;-----------------------------------------------------
 ;; the first dataset for parameter selection
 s3d = sdata.s4d[*,*,*,0]
+;conf.xpos = 135
+;conf.sconf.islit1 = 80
+;conf.sconf.islit2 = 150
 ;;-----------------------------------------------------
 ;; select islit1, islit2
 if keyword_set(sconf) then conf.sconf = sconf
@@ -459,17 +515,28 @@ for i=0,n_elements(names)-1 do msg_arr = [msg_arr,['click left button to select 
 if (conf.sconf.islit1 eq -1) or (conf.sconf.islit2 eq -1) then begin
    xpos2 = select_xpos(s3d, pmax=0.01, wid=20, bin=bin, /islabel, msg_arr=msg_arr)
    if xpos2[0] > xpos2[1] then xpos2 = reverse(xpos2)
-   conf.sconf.islit1 = xpos2[0] & conf.sconf.islit1 = xpos2[1]
+   conf.sconf.islit1 = xpos2[0] & conf.sconf.islit2 = xpos2[1]
 endif
-UNDEFINE, names & UNDEFINE, msg_arr & UNDEFINE, i
+UNDEFINE, names & UNDEFINE, msg_arr & UNDEFINE, i & UNDEFINE, xpos2
+wdelete, 20
 ;;-----------------------------------------------------
 ;; select xpos
 if conf.xpos eq -1 then conf.xpos = select_xpos(s3d, pmax=0.01, wid=21, bin=bin, /islabel)
 s2d = s3d[conf.xpos,*,*] ;; iquv at a single x position
-stop
+wdelete, 21
 ;;-----------------------------------------------------
 ;; select iedgeL, icentL, iedgeC, icentC
-
+names = ['edge of a polarmetric obsorption line', 'center of a polarmetric obsorption line']
+names = [names, ['edge of continuum','center of continuum']]
+msg_arr = []
+for i=0,n_elements(names)-1 do msg_arr = [msg_arr,['click left button to select '+names[i]+' ...']]
+xpos4 = select_ypos_profile(reform(s2d), wid=22, msg_arr=msg_arr)
+conf.sconf.iedgeL = xpos4[0]
+conf.sconf.icentL = xpos4[1]
+conf.sconf.iedgeC = xpos4[2]
+conf.sconf.icentC = xpos4[3]
+UNDEFINE, names & UNDEFINE, msg_arr & UNDEFINE, i & UNDEFINE,xpos4
+wdelete, 22
 ;;-----------------------------------------------------
 ;; set iobs1, iobs2
 if (conf.sconf.iobs1 eq -1) or (conf.sconf.iobs2 eq -1) then begin
@@ -481,7 +548,11 @@ if (conf.sconf.iobs1 eq -1) or (conf.sconf.iobs2 eq -1) then begin
    UNDEFINE,ss & UNDEFINE,ny & UNDEFINE,bias 
 endif
 
-
+;;-----------------------------------------------------
+print, 'conf : '
+help, conf
+print, 'conf.sconf : '
+help, conf.sconf
 ;;-----------------------------------------------------
 ;; initialize
 pars_anan = par_dst(wl0, sdata.dst[0].pos)

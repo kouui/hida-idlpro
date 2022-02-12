@@ -85,7 +85,7 @@ FUNCTION CALCULATE_FIT_RANGE, xl_edge, xl_center, xc_edge, xc_center, sp, xdata=
     xc_center = fix(xc_center)
 
     ;; fit minimum to find center
-    x0 = x0fit(sp,xl_center,5)
+    x0 = x0fit(sp,xl_center,8)
     nx = fix( abs(x0-xl_edge) )
     nxl = nx
     npoints = 2*nx+1
@@ -322,7 +322,7 @@ FUNCTION MPFIT_PARDST, conf_symfit, s4, dst3, parinit, parinfo, err, weight, nit
         spils[*,*,*,i] = spil[*,*,*,*]
         spics[*,*,*,i] = spic[*,*,*,*]
     endfor
-    
+    ;stop
     ;vthres = 0.5
     ;nthres = 5
     ;mask  = fltarr(ns,nx)

@@ -86,14 +86,15 @@ FUNCTION str_startswith, text, prefix
     return, (pre_text eq prefix) 
 END
 
-FUNCTION path_basename, text
+FUNCTION path_basename, text, folder=folder
     words = STRSPLIT(text, '/', /EXTRACT)
     nw = SIZE(words, /N_ELEMENTS)
-    fn = words[nw-1]
+    if not keyword_set(folder) then fn = words[nw-1] $
+    else fn = words[nw-2] + '/' + words[nw-1]
     return, fn
 END
 
-FUNCTION dst_scan_seconds_range, files, prefixs, offset_head, offset_tail
+FUNCTION dst_scan_seconds_range, files, prefixs, offset_head, offset_tail, folder=folder
     SETDEFAULTVALUE, offset_head, -10
     SETDEFAULTVALUE, offset_tail, 0
     
@@ -104,11 +105,8 @@ FUNCTION dst_scan_seconds_range, files, prefixs, offset_head, offset_tail
     for j=0,n_prefix-1 do begin
         pre = prefixs[j]
         for i=0,n_file-1 do begin
-            fn = path_basename(files[i])
             fname = files[i]
-            ;words = STRSPLIT(fname, '/', /EXTRACT)
-            ;nw = SIZE(words, /N_ELEMENTS)
-            ;fn = words[nw-1]
+            fn = path_basename(files[i], folder=folder)
             if (~str_startswith(fn, pre)) then CONTINUE
             sec = dst_time2seconds(dst_filename2time(fname))
             if (ranges[0,j] eq 0) then begin

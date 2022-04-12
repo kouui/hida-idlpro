@@ -4,6 +4,7 @@
 @mmdst_lib
 @quv_symfit
 @undefine
+@my_dst_pollib  ; overwrite functions in dst_pollib.pro
 
 path = path_st()
 dinfo = dinfo_st()
@@ -57,7 +58,7 @@ case obs of
 	dinfo.adj_dstpol = 0		; if 1, adjust DST pol.parms using Zeemen in sunspot 
 	dinfo.correct_I2quv = 2		; 0 - no correction, 1 - use pcal.i2quv[2,3],  2 - get i2quv from itself
 	
-	pmax0 = 0.001 
+	pmax0 = 0.005 
 	end
    'He.ar.1.2': begin
 	_wave0 = '10830'

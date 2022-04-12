@@ -5,7 +5,13 @@
 ;	2022.03.13	k.i.	rep_badframe, chk_1st_frame, xalign_sps, gif save
 ;	2022.03.19	k.i.	dinfo.xalign, com
 ;	2022.04.07	k.i.,u.k.,	cal structure
+;   2022.04.12  u.k.    
 
+;---------------------------------------------------------------------------
+
+;        ['white'  , 'green'  , 'red'    , 'yellow']
+_colors= ['ffffff'x, '66ff00'x, '9900ff'x, '00ffff'x] ; 'bbggrr'x
+;---------------------------------------------------------------------------
 dir0 = path.rootdir+path.caldatdir
 undefine,rfiles
 rfiles = create_struct( $
@@ -39,7 +45,8 @@ menu = ['0: average drkflt', $		; average dark & flat, save in workdir
 	'8: plot profs', $		; plot iquv profiles at ipos
 	'9: IQUV map', $		; make IQUV map
 	'10: cancel', $
-	'11: debug' $
+	'11: debug', $
+	'12: wlIQUV map' $      ; make IQUV map with wavelength scan
 	]
 
 step = smenu(menu,xpos=500,ypos=200,title='DST polcal')
@@ -56,6 +63,7 @@ case step of
 	9: goto,iquvmap		; show IQUV map and plot
 	10: stop
 	11: goto,debug
+	12: goto,wliquvmap  ; iquv map with wavelength scan
 endcase
 
 
@@ -213,7 +221,7 @@ if dinfo.xalign then begin
 	dinfo.com = '/xalign '
 endif
 
-debug:
+;debug:
 
 div=''
 t0 = systime(/second)
@@ -550,8 +558,85 @@ wdelete, 3
 
 endwhile
 
+stop
 
+wliquvmap:
+;***************  show iquvmap with wavelength scan *****************
+outdir = path.workdir+path.outdir
+files = findfile(path.workdir+path.outdir+'sav/*.sav')
+nf = n_elements(files)
+nstep = dinfo.nstep
+dd=2
+restore,files[nstep/2]	; -> s[*,*,4],pcal
+restore,cal.wl	; wl[]
+imgsize,s,nx,ny,n4
+;smap = fltarr(nx,nstep,4)
+sa = fltarr(nx,ny,4,nstep)
+loadct,0
+for iii=0,nstep-1 do begin
+	i = nstep - 1 - iii
+	print,i,'  ',files[i]
+	restore,files[i]
+	if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
+	;dispiquvr,s,bin=bin,pmax=pmax,wid=0,dd=dd ;,/ialog
+	sa[*,*,*,i] = s
+endfor
 
+debug:
+
+restore,cal.flat	; fltl & fltr[nxp,ny], avfltl & avfltr[nxp,ny],fltspl & fltspr[nxp,ny]
+imgsize,fltspl,nxp,nyp,n
+iprof = transpose(fltspl[nxp/2,*,0]) 
+if dinfo.wl_order eq 1  then iprof1=reverse(iprof) else iprof1=iprof
+
+s = sa[*,*,*,dinfo.j_pos]
+bin = binfact(s)
+nx2 = nx/bin &	ny2 = ny/bin
+if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
+
+dispiquvr,s,bin=bin,pmax=pmax,wid=0,dd=dd ;,/ialog
+print,'click an wavelength position'
+cursor,px,py,3,/dev
+x1 = (px-dd) mod (nx2+dd) &	j1 = (py-dd)
+print,'click another wavelength position'
+cursor,px,py,3,/dev
+x2 = (px-dd) mod (nx2+dd) &	j2 = (py-dd)
+
+ws = minmax([j1,j2] * bin)
+w1 = ws[0] & w2 = ws[1]
+
+nscan = w2-w1+1
+wid = 9 & dd = 2
+nx3 = 300 &	ny3 = 300
+imgsize,s,nxp,ny,nn
+nx2 = nxp/bin &	ny2 = ny/bin & nsp = nn
+if dinfo.wl_order eq 1 then wla = reverse(wl) else wla = wl
+;print, w1, w2
+count = 0
+for j0=w1,w2 do begin  ; loop over wavelength
+	count += 1
+	if dinfo.wl_order eq 1 then j1=w2-(j0-w1) else j1=j0
+	;print, j1
+	; draw iquv images
+	smap = fltarr(nx,nstep,4)
+	for i=0,nstep-1 do smap[*,i,*] = sa[*,j1*bin,*,i]
+	smap3 = congrid(smap,nx3,ny3,n4)
+	if dinfo.div eq '' then pmax = pmax0 * max(smap3[*,*,0]) else pmax=pmax0
+	window,wid,xs=nx3*nsp+dd*(nsp+1),ys=ny3+dd*2+(ny3+dd)
+	dispwliquvr,smap3,bin=1,pmax=pmax,wid=wid,/wexist,yoffset=ny3+dd*2,coms=['I','Q','U','V']
+
+	; draw i profile
+	plot, wla, iprof1, position=[0.05,0.15,0.98,0.48], charsize=2,/noerase,$
+		xr=[min(wla)-1,max(wla)+1], yr=[0.95*min(iprof1),1.05*max(iprof1)],$
+		xstyle=1,ystyle=1,xtickformat='(F7.1)',xtitle='wavelength [A]'
+	wl0 = wl[j1]
+	oplot, [wl0,wl0], [0.95*min(iprof1),1.05*max(iprof1)], line=2
+	
+	; save plots
+	fname=outdir+'/wliquv/'+string(count, format='%03d')+'.png'
+	WRITE_PNG, fname, TVRD(/TRUE)
+	print, 'saved as : ', fname
+endfor ; end loop over wavelength
 
 
 

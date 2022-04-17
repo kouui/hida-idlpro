@@ -21,7 +21,7 @@ cal = calfile_st()
 
 _MY_WORKDIR = '/tmp_mnt/nwork/kouui/data-lvl1/dstpol/'
 _MY_FOLDER  = '20220408.giant-prominence/'
-
+_IMG_FMT = 'png'  ; 'png', 'gif'
 ;---------------------------------------------------------------------------
 obs = 'He.pr.1.6'
 case obs of
@@ -59,7 +59,7 @@ case obs of
 	dinfo.j_pos = 40 		; position # in a scan for test
 	dinfo.wl0 = 10830. 		; central wavelength [A]
 	dinfo.incli = 15.33	 	; inclination if dst_info not available
-	dinfo.th_offset = 32.75		; from #1, offset angle of waveplate to eliminate R, deg.
+	;dinfo.th_offset = 32.75		; from #1, offset angle of waveplate to eliminate R, deg.
 	dinfo.div = ''			; divide QUV by continuum 'c',  intensity 'i', and non ''
 	dinfo.xalign = 0			; align in slit direction
 	dinfo.adj_dstpol = 0		; if 1, adjust DST pol.parms using Zeemen in sunspot 
@@ -102,7 +102,7 @@ case obs of
 	dinfo.j_pos = 25 		; position # in a scan for test
 	dinfo.wl0 = 10830. 		; central wavelength [A]
 	dinfo.incli = 6.10	 	; inclination if dst_info not available
-	dinfo.th_offset = 32.75		; from #1, offset angle of waveplate to eliminate R, deg.
+	;dinfo.th_offset = 32.75		; from #1, offset angle of waveplate to eliminate R, deg.
 	dinfo.div = ''			; divide QUV by continuum 'c',  intensity 'i', and non ''
 	dinfo.xalign = 0			; align in slit direction
 	dinfo.adj_dstpol = 0		; if 1, adjust DST pol.parms using Zeemen in sunspot 

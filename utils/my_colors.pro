@@ -1,0 +1,2 @@
+;         ['white'  , 'green'  , 'red'    , 'yellow' , 'purple' , 'blue'   , 'brown'  , 'cyan'   ]
+_colors = ['ffffff'x, '66ff00'x, '9900ff'x, '00ffff'x, '393893'x, 'd67e40'x, '206b5c'x, 'edf580'x] ; 'bbggrr'x

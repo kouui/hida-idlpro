@@ -21,7 +21,7 @@ cal = calfile_st()
 
 _MY_WORKDIR = '/tmp_mnt/nwork/kouui/data-lvl1/dstpol/'
 _MY_FOLDER  = '20220309.various-prominence/'
-
+_IMG_FMT = 'png'  ; 'png', 'gif'
 ;---------------------------------------------------------------------------
 obs = 'He.ar.1.4'
 case obs of

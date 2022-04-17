@@ -5,7 +5,8 @@
 ;	2022.03.13	k.i.	rep_badframe, chk_1st_frame, xalign_sps, gif save
 ;	2022.03.19	k.i.	dinfo.xalign, com
 ;	2022.04.07	k.i.,u.k.,	cal structure
-;   2022.04.12  u.k.    
+;   2022.04.12  u.k.  
+;	2022.04.16	k.i.,u.k.,	wdyesno() for save pcal, default th_offset from expo&rotp, rotp fix -> float  
 
 ;---------------------------------------------------------------------------
 
@@ -46,7 +47,8 @@ menu = ['0: average drkflt', $		; average dark & flat, save in workdir
 	'9: IQUV map', $		; make IQUV map
 	'10: cancel', $
 	'11: debug', $
-	'12: wlIQUV map' $      ; make IQUV map with wavelength scan
+	'12: wl-IQUVmap scan' $      ; make IQUV map with wavelength scan
+	;'13: slit - IQUVspectra scan' $      ; make IQUV map with wavelength scan
 	]
 
 step = smenu(menu,xpos=500,ypos=200,title='DST polcal')
@@ -64,6 +66,7 @@ case step of
 	10: stop
 	11: goto,debug
 	12: goto,wliquvmap  ; iquv map with wavelength scan
+	13: goto,slitiquvmap; iquv 2d spectra with slit scan
 endcase
 
 
@@ -162,7 +165,7 @@ restore,cal.flat	; -> fltl,fltr,avfltl,avfltr,fltspl,fltspr
 print,'reading pol.data ',rfiles.polarizer[0]
 spp = read_dstfits(rfiles.polarizer[0],hp,cam=cam,dst=dst,tim=tim)
 imgsize,spp,nx,ny,nn
-rotp = fits_keyval(hp,'ROTP',/fix)
+rotp = fits_keyval(hp,'ROTP',/float)
 expo = fits_keyval(hp,'EXP',/float)
 dinfo.expo = expo
 dinfo.rotp = rotp
@@ -206,7 +209,7 @@ endcase
 print,'eliminate R by adjusting th_offset..'
 j0 = dinfo.nstep*dinfo.i_scan
 file1 = rfiles.files[j0+dinfo.j_pos]
-;;file1 = rfiles.polarizer[0]
+;file1 = rfiles.polarizer[1]
 print,dinfo.j_pos,'  reading ',file1
 sps = read_dstfits(file1,h,cam=cam,dst=dst,tim=tim)
 
@@ -220,6 +223,12 @@ if dinfo.xalign then begin
 	xalign_sps,spsl,spsr,xprof,dx=dx		;  align sps[*,*,nn] in slit direction
 	dinfo.com = '/xalign '
 endif
+
+; empirical th_offset, 24.3 from Pol.data, 0.4 pol. offset from sunspot-V
+if dinfo.camera eq 'GOLDEYE' then deadtime = 3.32*0.001 else deadtime=0.
+th_offset0 = 0.5*(dinfo.expo - deadtime) *360./dinfo.rotp + 24.3 + 0.4  ; deg.  
+ans = wdyesno('Use default th_offset (='+string(th_offset0,form='(f7.2)')+') ?',x=400,y=300)
+if ans then dinfo.th_offset = th_offset0
 
 ;debug:
 
@@ -242,7 +251,7 @@ endif else begin
 	com='[from Anan]'
 endelse
 
-if dst.zd eq 0. and dst.ha eq 0. then begin
+if (dst.zd eq 0. and dst.ha eq 0.) or (dst.zd gt 100.) then begin
 	date_obs = fits_keyval(h,'DATE_OB2')
 	dst = dst_st(calc_dstinfo(date_obs,dinfo.incli))
 	dst.pos = dinfo.telpos
@@ -254,7 +263,7 @@ s1=s0
 s1[*,*,0:3] = correct_DSTpol(s0, dinfo.wl0, dst, sc=sc, mm=mm, pars=pars)
 bin = binfact(s0)
 dispiquvr,s1,bin=bin,pmax=pmax,/ialog,title='demo & mmdst '+com
-means = rebin(s1,1,1,5) &	print,"mean of R = ", reform(means,5)/means[0]
+means = rebin(s1,1,1,5) &	print,"mean of IQUVR/I = ", reform(means,5)/means[0]
 com = 'th_offset = '+string(dinfo.th_offset,form='(f7.2)')+'   ==> '
 ans = wdgetstr(com,xpos=500,ypos=300,title='eliminate R')
 while ans ne '' do begin
@@ -262,18 +271,29 @@ while ans ne '' do begin
 	s0 = dualsp_demodulate(spsl,spsr,ap,dinfo,sl=sl,sr=sr) ; spls,sprs[nxp,nyp,nn],  sl,sr[nxp,nyp,5]
 	s1[*,*,0:3] = correct_DSTpol(s0, dinfo.wl0, dst, sc=sc, mm=mm, pars=pars)
 	s1[*,*,4] = s0[*,*,4]
+	;s1 = s0
 	dispiquvr,s1,bin=bin,pmax=pmax,/ialog,title='demo & mmdst '+com
-	means = rebin(s1,1,1,5) &	print,"mean of R = ", reform(means,5)/means[0]
+	means = rebin(s1,1,1,5) &	print,"mean of IQUVR/I = ", reform(means,5)/means[0]
 	com = 'th_offset = '+string(dinfo.th_offset,form='(f7.2)')+'   ==> '
 	ans = wdgetstr(com,xpos=500,ypos=300,title='eliminate R')
 endwhile
 
+;;mprof1 =  reform(rebin(sps[ap.ix1:ap.ix2,ap.yc[0]:ap.yc[1],*],1,1,nn),nn)
+;;mprof2 =  reform(rebin(sps[ap.ix1+ap.ddx:ap.ix2+ap.ddx, $
+;;			   ap.yc[0]+ap.ddy:ap.yc[1]+ap.ddy,*],1,1,nn),nn)
+;;window,13,xs=1550,ys=500
+;;plot,mprof2,title='modullation w/ polarizer+waveplate',chars=2
+;;oplot,mprof1,line=2,col=250
 
-help,dinfo,/st
-if not file_test(calpardir) then file_mkdir,calpardir
-save,dinfo,file = cal.dinfo
-print,'demod.params: nrot= ',dinfo.nrot,',   th_offset=',dinfo.th_offset
-print,'dinfo saved in ',cal.dinfo
+
+ans = wdyesno('Do you like to save dinfo in "'+cal.dinfo+'" ?',x=400,y=300)
+if ans then begin
+	;help,dinfo,/st
+	if not file_test(calpardir) then file_mkdir,calpardir
+	save,dinfo,file = cal.dinfo
+	print,'demod.params: nrot= ',dinfo.nrot,',   th_offset=',dinfo.th_offset
+	print,'dinfo saved in ',cal.dinfo
+endif
 
 stop
 
@@ -290,7 +310,7 @@ bin = binfact(fltl)
 nf = n_elements(rfiles.files)
 
 ;--- correct DST polarization ---
-if dst.zd eq 0. and dst.ha eq 0. then begin
+if (dst.zd eq 0. and dst.ha eq 0.) or (or dst.zd gt 100.) then begin
 	date_obs = fits_keyval(h,'DATE_OB2')
 	dst = dst_st(calc_dstinfo(date_obs,dinfo.incli))
 	dst.pos = dinfo.telpos
@@ -336,7 +356,10 @@ bin = binfact(s)
 if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
 dispiquvr,s,bin=bin,pmax=pmax,wid=2,title=com;,/ialog
 
-if dinfo.adj_dstpol then begin
+
+ans = wdyesno('Do you like to save pcal in "'+cal.pcal+'" ?',x=400,y=300)
+;if dinfo.adj_dstpol then begin
+if ans then begin
 	save,pcal,file=cal.pcal
 	print,'pcal saved in ',cal.pcal
 endif
@@ -376,7 +399,7 @@ for j=0,nstep-1 do begin
 	com1 = strcompress(string(j)+'/'+string(nstep),/remove_all)
 	print,com1+'  reading ',file1
 	sps = read_dstfits(file1,h,cam=cam,dst=dst,tim=tim)
-	if dst.zd eq 0. and dst.ha eq 0. then begin
+	if (dst.zd eq 0. and dst.ha eq 0.) or (or dst.zd gt 100.) then begin
 		date_obs = fits_keyval(h,'DATE_OB2')
 		dst = dst_st(calc_dstinfo(date_obs,dinfo.incli))
 		dst.pos = dinfo.telpos
@@ -385,7 +408,7 @@ for j=0,nstep-1 do begin
 	endif
 
 	sps = rep_missing_pix(sps,miss=ibad)	; replace missing pixels with average i-1 & i+1 frame
-	if miss ne 0 then dinfo.com=dinfo.com+'/missing_pix '
+	;if miss ne 0 then dinfo.com=dinfo.com+'/missing_pix '
 	dualsp_calib1,sps,drk,fltl,fltr,ap,spsl,spsr;,/ver	; dark, two-sp, aligh, flat
 	chk_1st_frame,spsl,spsr,ap,dinfo,xprof=xprof		; xprof[nxp,nn]  - wl-ave. intensity along slit & modulation
 	if dinfo.xalign then begin
@@ -397,7 +420,10 @@ for j=0,nstep-1 do begin
 	if dinfo.div eq '' then pmax = pmax0 * max(s0[*,*,0]) else pmax=pmax0
 	dispiquvr,s0,bin=bin,pmax=pmax,/ialog,wid=0,title=com+' only'
 	filename_sep,file1,di,fnam,ex
-	win2gif,gifdir+'s0/s0.'+fnam+'.gif'
+	case _IMG_FMT of
+		'png':  WRITE_PNG, gifdir+'s0/s0.'+fnam+'.png', TVRD(/TRUE)
+		'gif':  win2gif,gifdir+'s0/s0.'+fnam+'.gif'
+	endcase
 
 	s1 = correct_DSTpol(s0,dinfo.wl0,dst,sc=sc,mm=mm,pars=pcal.pars)
 	com = com + ' & mmdst [pcal]'
@@ -425,7 +451,10 @@ for j=0,nstep-1 do begin
 	if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
 	dispiquvr,s,bin=bin,pmax=pmax,/ialog,wid=3,title=com ;
 	xyouts,10,10,string(j,form='(i3)')+': '+fnam,/dev,chars=3,col=0
-	win2gif,gifdir+'s/s.'+fnam+'.gif'
+	case _IMG_FMT of
+		'png':  WRITE_PNG, gifdir+'s/s.'+fnam+'.png', TVRD(/TRUE)
+		'gif':  win2gif,gifdir+'s/s.'+fnam+'.gif'
+	endcase
 
 	imgsize,s,nxp,nyp,n5
 	outfile=outdir+'/sav/'+fnam+'.sav'
@@ -628,7 +657,7 @@ for j0=w1,w2 do begin  ; loop over wavelength
 	; draw i profile
 	plot, wla, iprof1, position=[0.05,0.15,0.98,0.48], charsize=2,/noerase,$
 		xr=[min(wla)-1,max(wla)+1], yr=[0.95*min(iprof1),1.05*max(iprof1)],$
-		xstyle=1,ystyle=1,xtickformat='(F7.1)',xtitle='wavelength [A]'
+		xstyle=1,ystyle=1,xtickformat='(F7.0)',xtitle='wavelength [A]'
 	wl0 = wl[j1]
 	oplot, [wl0,wl0], [0.95*min(iprof1),1.05*max(iprof1)], line=2
 	
@@ -638,5 +667,66 @@ for j0=w1,w2 do begin  ; loop over wavelength
 	print, 'saved as : ', fname
 endfor ; end loop over wavelength
 
+stop
 
+slitiquvmap:
+
+outdir = path.workdir+path.outdir
+files = findfile(path.workdir+path.outdir+'sav/*.sav')
+nf = n_elements(files)
+nstep = dinfo.nstep
+dd=2
+restore,files[nstep/2]	; -> s[*,*,4],pcal
+restore,cal.wl	; wl[]
+imgsize,s,nx,ny,n4
+;smap = fltarr(nx,nstep,4)
+
+if keyword_set(sa) then begin
+sa = fltarr(nx,ny,4,nstep)
+loadct,0
+ for iii=0,nstep-1 do begin
+	i = nstep - 1 - iii
+	print,i,'  ',files[i]
+	restore,files[i]
+	if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
+	;dispiquvr,s,bin=bin,pmax=pmax,wid=0,dd=dd ;,/ialog
+	sa[*,*,*,i] = s
+endfor
+endif
+
+;restore,cal.flat	; fltl & fltr[nxp,ny], avfltl & avfltr[nxp,ny],fltspl & fltspr[nxp,ny]
+;imgsize,fltspl,nxp,nyp,n
+;iprof = transpose(fltspl[nxp/2,*,0]) 
+;if dinfo.wl_order eq 1  then iprof1=reverse(iprof) else iprof1=iprof
+
+s = sa[*,*,*,dinfo.j_pos]
+bin = binfact(s)
+nx2 = nx/bin &	ny2 = ny/bin
+;if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
+
+count = 0
+;; this for loop is not yet implemented
+for j1=0, nstep-1 do begin  ; loop over slit positions
+	count += 1
+
+	; draw iquv images
+	smap = fltarr(nx,nstep,4)
+	for i=0,nstep-1 do smap[*,i,*] = sa[*,j1*bin,*,i]
+	smap3 = congrid(smap,nx3,ny3,n4)
+	if dinfo.div eq '' then pmax = pmax0 * max(smap3[*,*,0]) else pmax=pmax0
+	window,wid,xs=nx3*nsp+dd*(nsp+1),ys=ny3+dd*2+(ny3+dd)
+	dispwliquvr,smap3,bin=1,pmax=pmax,wid=wid,/wexist,yoffset=ny3+dd*2,coms=['I','Q','U','V']
+
+	; draw i profile
+	plot, wla, iprof1, position=[0.05,0.15,0.98,0.48], charsize=2,/noerase,$
+		xr=[min(wla)-1,max(wla)+1], yr=[0.95*min(iprof1),1.05*max(iprof1)],$
+		xstyle=1,ystyle=1,xtickformat='(F7.0)',xtitle='wavelength [A]'
+	wl0 = wl[j1]
+	oplot, [wl0,wl0], [0.95*min(iprof1),1.05*max(iprof1)], line=2
+	
+	; save plots
+	fname=outdir+'/wliquv/'+string(count, format='%03d')+'.png'
+	WRITE_PNG, fname, TVRD(/TRUE)
+	print, 'saved as : ', fname
+endfor ; end loop over slit positions
 

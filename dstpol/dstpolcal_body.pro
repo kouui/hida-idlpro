@@ -310,7 +310,7 @@ bin = binfact(fltl)
 nf = n_elements(rfiles.files)
 
 ;--- correct DST polarization ---
-if (dst.zd eq 0. and dst.ha eq 0.) or (or dst.zd gt 100.) then begin
+if (dst.zd eq 0. and dst.ha eq 0.) or (dst.zd gt 100.) then begin
 	date_obs = fits_keyval(h,'DATE_OB2')
 	dst = dst_st(calc_dstinfo(date_obs,dinfo.incli))
 	dst.pos = dinfo.telpos
@@ -357,11 +357,13 @@ if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
 dispiquvr,s,bin=bin,pmax=pmax,wid=2,title=com;,/ialog
 
 
+if dinfo.adj_dstpol then begin
 ans = wdyesno('Do you like to save pcal in "'+cal.pcal+'" ?',x=400,y=300)
 ;if dinfo.adj_dstpol then begin
 if ans then begin
 	save,pcal,file=cal.pcal
 	print,'pcal saved in ',cal.pcal
+endif
 endif
 
 filename_sep,file1,di,fnam,ex
@@ -399,7 +401,7 @@ for j=0,nstep-1 do begin
 	com1 = strcompress(string(j)+'/'+string(nstep),/remove_all)
 	print,com1+'  reading ',file1
 	sps = read_dstfits(file1,h,cam=cam,dst=dst,tim=tim)
-	if (dst.zd eq 0. and dst.ha eq 0.) or (or dst.zd gt 100.) then begin
+	if (dst.zd eq 0. and dst.ha eq 0.) or (dst.zd gt 100.) then begin
 		date_obs = fits_keyval(h,'DATE_OB2')
 		dst = dst_st(calc_dstinfo(date_obs,dinfo.incli))
 		dst.pos = dinfo.telpos

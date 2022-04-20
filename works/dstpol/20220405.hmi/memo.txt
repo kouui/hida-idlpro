@@ -1,0 +1,13 @@
+1. google groups : reading fits file compressed by fpack (rice compression)
+https://groups.google.com/g/idl-pvwave/c/M_wlec3eLqA?pli=1
+
+2. readfits.pro has /fpack keyword, but not allowed to use? need fpack installed?
+https://www.l3harrisgeospatial.com/docs/readfits.html
+
+3. rice.pro, to run it we need to build the executable `decrunch`
+https://sdowww.lmsal.com/TRACE/Data/DataProcessing/shine_stuff/anafileread.html
+https://hesperia.gsfc.nasa.gov/ssw/packages/lparl/idl/io/rice.pro
+
+4. astropy is able to handle rice compressed fits file
+https://github.com/astropy/astropy/issues/5969
+

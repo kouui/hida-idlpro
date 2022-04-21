@@ -47,8 +47,8 @@ menu = ['0: average drkflt', $		; average dark & flat, save in workdir
 	'9: IQUV map', $		; make IQUV map
 	'10: cancel', $
 	'11: debug', $
-	'12: wl-IQUVmap scan' $      ; make IQUV map with wavelength scan
-	;'13: slit - IQUVspectra scan' $      ; make IQUV map with wavelength scan
+	'12: wl-IQUVmap scan', $      ; make IQUV map with wavelength scan
+	'13: qlmap all folder' $      ; widget selection to view qlmap in all data folders
 	]
 
 step = smenu(menu,xpos=500,ypos=200,title='DST polcal')
@@ -66,7 +66,7 @@ case step of
 	10: stop
 	11: goto,debug
 	12: goto,wliquvmap  ; iquv map with wavelength scan
-	13: goto,slitiquvmap; iquv 2d spectra with slit scan
+	13: goto,qlAll		; widget selection to view qlmap in all data folders
 endcase
 
 
@@ -731,4 +731,12 @@ for j1=0, nstep-1 do begin  ; loop over slit positions
 	WRITE_PNG, fname, TVRD(/TRUE)
 	print, 'saved as : ', fname
 endfor ; end loop over slit positions
+
+stop
+
+qlAll:
+
+ku_qlmapAll, path.rootdir, cal.ap, wid=7
+
+stop
 

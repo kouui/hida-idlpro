@@ -736,7 +736,7 @@ stop
 
 qlAll:
 
-ku_qlmapAll, path.rootdir, cal.ap, wid=7
+ku_qlmapAll, path.rootdir, cal.ap, wid=7, /wscan, dinfo=dinfo
 
 stop
 

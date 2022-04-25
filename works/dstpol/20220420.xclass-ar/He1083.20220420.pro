@@ -22,18 +22,6 @@ obs = 'He.ar.2.3'
 ;obs = 'view'
 case obs of
 ;;--------------------------------------------
-	'view': begin
-	_wave0 = '10830'
-	path.rootdir = _DATAROOT + 'spec/He_I_10830/'	; root directory of raw dataset
-	path.obsdir = 'ar.1.1/'				; holder of obs dataset
-	path.obsdat = '*.fits'
-	path.workdir = _MY_WORKDIR + _MY_FOLDER	; output root directory in /nwork
-	path.calpardir = 'cal/'				; directory for saving calib.params in workdir
-	calpardir = path.workdir+path.calpardir
-	cal.ap = calpardir+	_wave0+'.ap.sav'		; alignment params.
-	dinfo.nstep = -1
-	end
-;;--------------------------------------------
 	'He.ar.2.1': begin
 	_wave0 = '10830' & _exp0 = '15' & _rotp0 = '10' & _setname = 'ar.2.1'
 	path.rootdir = 	_DATAROOT + 'spec/He_I_10830/' ; root directory of raw dataset

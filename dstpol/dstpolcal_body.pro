@@ -320,6 +320,10 @@ com = 'demo & mmdst'
 if keyword_set(dinfo.telpos) then dst.pos = dinfo.telpos
 if dinfo.adj_dstpol then begin
 	pcal = mmdst_adjust(s0[*,*,0:3]/max(s0[*,*,0]), dst, dinfo.wl0, bin=bin) 
+	print, "--- PCAL.PARS inititial parameters "
+	help, pcal.pars_init
+	print, "--- PCAL.PARS result    parameters "
+	help, pcal.pars
 	com=com+'[from Zeeman]'
 endif else begin
 	if not file_test(cal.pcal) then begin

@@ -347,7 +347,9 @@ help,s4d
 	
 	mm = update_mmdst(sdata.dst[0], pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
    s1 = UPDATE_S3(pdata.s2d_origin, mm)
-	update_profile_plots, sdata.wl, s1, wid_profile, s0=pdata.s2d_origin, s2=pdata.s2d_anan
+   if conf_symfit.corr_Icrtk then s1 = correct_Icrtk(s1)
+   if conf_symfit.corr_Icrtk then s2d_anan = correct_Icrtk(pdata.s2d_anan)
+	update_profile_plots, sdata.wl, s1, wid_profile, s0=pdata.s2d_origin, s2=s2d_anan
 END
 ;------------------------------------------------------------------------
 ;; widget layout for sliders
@@ -582,19 +584,19 @@ if (conf.sconf.iobs1 eq -1) or (conf.sconf.iobs2 eq -1) then begin
 endif
 
 ;;-----------------------------------------------------
-print, 'conf : '
-help, conf
-print, 'conf.sconf : '
-help, conf.sconf
+;print, 'conf : '
+;help, conf
+;print, 'conf.sconf : '
+;help, conf.sconf
 ;;-----------------------------------------------------
 
 
 mm = update_mmdst(sdata.dst[0], pars.xn, pars.tn, pars.xc, pars.tc, pars.sc, th_vs=pars.th_vs)
 s2d_anan = UPDATE_S3(s2d, mm)
-
 ; pdata = {plot_data, s2d_origin:s2d, s2d_anan:s2d_anan}
 pdata = create_struct('s2d_origin', s2d, 's2d_anan', s2d_anan)
-
+;stop
+if conf.sconf.corr_Icrtk then s2d_anan = correct_Icrtk(s2d_anan)
 wid_profile = 12
 update_profile_plots,sdata.wl,s2d_anan,wid_profile,s0=s2d,s2=s2d_anan,/init
 ;stop

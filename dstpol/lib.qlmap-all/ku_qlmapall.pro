@@ -9,7 +9,9 @@
 ;; 2022.04.21  k.u.  added wscan option to ku_qlmapall
 ;; 2022.04.26  k.u   added axe to image; disable wlident; 
 ;;                   reverse file reading order to put the first data on the top
-;;                   (S4 scan : from top to bottom) 
+;;                   (S4 scan : from top to bottom)
+;;                   added log scale conversion
+;;                   profile axe position calculated in device coordinate
 
 ;;----------------------------------------------------------------
 FUNCTION ku_generate_menu, rootdir
@@ -74,6 +76,7 @@ while 1b do begin
         wxim = wxs-4*dd
         wyim = wxs-dd
         tvsclpos = [3*dd,wys-wxs]
+        plotpos = [dd,3*dd,wxs-dd/2,wys-wxs-dd]
         axepos = [float(3*dd)/wxs,float(wys-wxs)/wys,float(wxs-dd)/wxs,float(wys-dd)/wys]
         for jj=0,nstep-1 do begin
             j = nstep-1-jj
@@ -81,7 +84,7 @@ while 1b do begin
             sp1 = readfits(files[j0+j],h,nslice=1)
             sps[*,*,j] = sp1[ap.ix1:ap.ix2,*]
         endfor
-        im = reverse(congrid(reform(sps[*,250,*]),wxim,wyim),2)
+        im = congrid(reform(sps[*,250,*]),wxim,wyim)
         prof = reform(rebin(sps[nxp/2-5:nxp/2+5,*,nstep/2],1,ny,1))
         if dinfo.wl_order eq 1 then prof=reverse(prof)
         if not keyword_set(wl) then begin
@@ -99,21 +102,44 @@ while 1b do begin
         plot, [0,nxp],[0,nstep],yr=[nstep,0],xstyle=1,ystyle=1,/nodata,position=axepos,yticklen=-0.014,ytickformat='(I3)',xtickformat='(A1)'
         ;axis, tvsclpos[0], tvsclpos[1],yaxis=0, yticklen=-0.5, yrange=[0, nstep], color=color_red, /nodata,ystyle=1,/device
         tvscl, im, tvsclpos[0], tvsclpos[1]
-        plot, wl, prof, yr=yr, xstyle=1, position=[0.03,0.05,0.98,(wys-wxs-2*dd)/float(wys)], /noerase,ytickformat='(A1)',xtickformat='(F7.0)'
+        ;plot, wl, prof, yr=yr, xstyle=1, position=[0.03,0.05,0.98,(wys-wxs-2*dd)/float(wys)], /noerase,ytickformat='(A1)',xtickformat='(F7.0)'
+        plot, wl, prof, yr=yr, xstyle=1, /device, position=plotpos, /noerase,ytickformat='(A1)',xtickformat='(F7.0)'
         
+        islog = 0b
+        last_button = 0
         while 1b do begin
-            cursor, x, y, /data, /change
-            if !mouse.button ne 0 then break ; mouse clicked
-            ;print, x, y
-            if (x lt xr[0]) or (x gt xr[1]) then continue
-            if (y lt yr[0]) or (y gt yr[1]) then continue
+            ;cursor, x, y, /data, /change
+            cursor, x, y, /device, /change
+            ;print, !mouse
+            ; mouse left click to change image scale
+            if (!mouse.button eq 1) and $
+                ((x-tvsclpos[0])*(x-tvsclpos[0]-wxim) lt 0) and $
+                ((y-tvsclpos[1])*(y-tvsclpos[1]-wyim) lt 0) and $
+                (last_button ne 1) then begin
+                    islog=~islog
+                    if islog then scale = 'log' else scale = 'linear'
+                    print, '[QLMAP] image scale -> '+scale+' scale'
+            endif
+            last_button = !mouse.button
+            ; mouse right clicked to quit
+            if !mouse.button eq 4 then begin 
+                wait, 0.5
+                break
+            endif
+            ;if (x lt xr[0]) or (x gt xr[1]) then continue
+            ;if (y lt yr[0]) or (y gt yr[1]) then continue
             ;print, "x,y = ", x, y
-            ;xpos = ny-1-fix(x)
+            
+            if (x lt plotpos[0]) or (x gt plotpos[2]) then continue
+            if (y lt plotpos[1]) or (y gt plotpos[3]) then continue
+            
+            x=fix( xr[0]+(x-plotpos[0])*float(xr[1]-xr[0]+1)/(plotpos[2]-plotpos[0]+1) )
             _tmp = min(abs(wl-x), xpos)
-            ;print, xpos
             if dinfo.wl_order eq 1 then xpos = ny-1-xpos
-            im = reverse(congrid(reform(sps[*,xpos,*]),wxim,wyim),2)
+            im = congrid(reform(sps[*,xpos,*]),wxim,wyim)
+            if islog then im = alog(im)
             tvscl, im, tvsclpos[0], tvsclpos[1]
+
         endwhile
         wdelete, wid
     endif else begin

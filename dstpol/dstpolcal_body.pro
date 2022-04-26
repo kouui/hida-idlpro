@@ -13,6 +13,11 @@
 ;        ['white'  , 'green'  , 'red'    , 'yellow']
 _colors= ['ffffff'x, '66ff00'x, '9900ff'x, '00ffff'x] ; 'bbggrr'x
 ;---------------------------------------------------------------------------
+; if workdir not exist, then create
+if not file_test(path.workdir) then file_copy, _MY_WORKDIR+'20xxxxxx.template/',path.workdir,/recursive,/verbose
+if not file_test(path.workdir+path.outdir) then  file_copy, path.workdir+'setdir.template',path.workdir+path.outdir, /recursive,/verbose
+
+;---------------------------------------------------------------------------
 dir0 = path.rootdir+path.caldatdir
 undefine,rfiles
 rfiles = create_struct( $

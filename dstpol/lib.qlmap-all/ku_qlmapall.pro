@@ -63,27 +63,34 @@ while 1b do begin
     j0 = 0
 
     if keyword_set(wscan) then begin
-        dd = 10
+        dd = 15
         wxs = 400
         wys = 600
+        ;wxim = wxs-2*dd
+        ;wxim = wxs-dd
+        wxim = wxs-3*dd
+        wyim = wxs-dd
+        tvsclpos = [2*dd,wys-wxs]
+        axepos = [float(2*dd)/wxs,float(wys-wxs)/wys,float(wxs-dd)/wxs,float(wys-dd)/wys]
         for j=0,nstep-1 do begin
             print,j,'  ',files[j0+j]
             sp1 = readfits(files[j0+j],h,nslice=1)
             sps[*,*,j] = sp1[ap.ix1:ap.ix2,*]
         endfor
-        im = reverse(congrid(reform(sps[*,250,*]),wxs,wxs),2)
+        im = reverse(congrid(reform(sps[*,250,*]),wxim,wyim),2)
         prof = reform(rebin(sps[nxp/2-5:nxp/2+5,*,0],1,ny,1))
         if dinfo.wl_order eq 1 then prof=reverse(prof)
         if not keyword_set(wl) then begin
             wl = wlident(prof, dinfo.wl0, dinfo.wl_range)
             ;if dinfo.wl_order eq 1 then wl=reverse(wl)
-            wdelete, 0
+            ;wdelete, 0
         endif
-        yr = [0.98, 1.01] * minmax(prof)
+        yr = [0.995, 1.005] * minmax(prof)
         xr = minmax(wl);[0,ny-1]
-        window, wid, xs=wxs, ys=wys+dd, xpos=600, ypos=200
-        tvscl, im, 0, wys-wxs+dd
-        plot, wl, prof, yr=yr, xstyle=1, position=[0.0,0.1,1.0,(wys-wxs)/float(wys)], /noerase,xtickformat='(F7.0)'
+        window, wid, xs=wxs, ys=wys, xpos=600, ypos=200
+        plot, [0,nxp-1],[0,nstep-1], xstyle=1,ystyle=1,position=axepos,/nodata,xtickformat='(I4)'
+        tvscl, im, tvsclpos[0], tvsclpos[1]
+        plot, wl, prof, yr=yr, xstyle=1, position=[0.0,0.06,0.98,(wys-wxs-2*dd)/float(wys)], /noerase,xtickformat='(F7.0)'
         while 1b do begin
             cursor, x, y, /data, /change
             if !mouse.button ne 0 then break ; mouse clicked
@@ -95,8 +102,8 @@ while 1b do begin
             _tmp = min(abs(wl-x), xpos)
             ;print, xpos
             if dinfo.wl_order eq 1 then xpos = ny-1-xpos
-            im = reverse(congrid(reform(sps[*,xpos,*]),wxs,wxs),2)
-            tvscl, im, 0, wys-wxs+dd
+            im = reverse(congrid(reform(sps[*,xpos,*]),wxim,wyim),2)
+            tvscl, im, tvsclpos[0], tvsclpos[1]
         endwhile
         wdelete, wid
     endif else begin

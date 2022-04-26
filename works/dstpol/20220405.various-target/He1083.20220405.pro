@@ -17,7 +17,8 @@ _IMG_FMT = 'png'  ; 'png', 'gif'
 ; 
 
 obs = 'He.ar.1.1'
-obs = 'He.pr.1.6'
+;obs = 'He.pr.1.6'
+;obs = 'He.ar.1.2'
 case obs of
 ;;--------------------------------------------
 	'He.ar.1.1': begin
@@ -56,11 +57,11 @@ case obs of
 	;dinfo.th_offset = 26.5		; from #1, offset angle of waveplate to eliminate R, deg.
 	dinfo.div = 'c'			; divide QUV by continuum 'c',  intensity 'i', and non ''
 	dinfo.xalign = 0		; align in slit direction
-	dinfo.adj_dstpol = 0		; if 1, adjust DST pol.parms using Zeemen in sunspot 
+	dinfo.adj_dstpol = 1		; if 1, adjust DST pol.parms using Zeemen in sunspot 
 	dinfo.correct_I2quv = 2		; 0 - no correction, 1 - use pcal.i2quv[2,3],  2 - get i2quv from itself
 	
 	my_i2quv = [0, 0., 0]   ; WEST with WEST pcal
-	pmax0 = 0.02 
+	pmax0 = 0.005 
 	end
 ;;--------------------------------------------
 	'He.ar.1.2': begin
@@ -83,7 +84,7 @@ case obs of
 	cal.flat = calpardir+	_wave0+'.flat.sav'		; fltl,fltr,avfltl,avfltr,fltspl,fltspr [nxp,ny] 
 	cal.ap = calpardir+	_wave0+'.ap.sav'		; alignment params.
 	cal.dinfo = path.workdir + path.outdir +	'dinfo.sav'	; data info.
-	cal.pcal = path.workdir + path.outdir + '../ar.1.1/' +	_wave0+'.pcal.sav'	; polari. calib params.
+	cal.pcal = path.workdir + path.outdir  +	_wave0+'.pcal.sav'	; polari. calib params.
 	cal.wl = calpardir+	_wave0+'.wl.sav'		; wavelength wl[*]
 
 	if file_test(cal.dinfo) then restore,cal.dinfo
@@ -99,11 +100,11 @@ case obs of
 	;dinfo.th_offset = 26.5		; from #1, offset angle of waveplate to eliminate R, deg.
 	dinfo.div = 'c'			; divide QUV by continuum 'c',  intensity 'i', and non ''
 	dinfo.xalign = 0		; align in slit direction
-	dinfo.adj_dstpol = 0		; if 1, adjust DST pol.parms using Zeemen in sunspot 
+	dinfo.adj_dstpol = 1		; if 1, adjust DST pol.parms using Zeemen in sunspot 
 	dinfo.correct_I2quv = 2		; 0 - no correction, 1 - use pcal.i2quv[2,3],  2 - get i2quv from itself
 	
 	my_i2quv = [0, 0., 0]   ; WEST with WEST pcal
-	pmax0 = 0.02 
+	pmax0 = 0.005 
 	end
 ;;--------------------------------------------
 	'He.pr.1.4': begin

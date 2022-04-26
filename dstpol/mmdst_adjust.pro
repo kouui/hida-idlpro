@@ -526,6 +526,7 @@ pcal = {mmdst_adjust_struct, conf:conf, pars:pars, pars_init:pars_init, i2quv:fl
 
 if keyword_set(anan) then return,pcal
 
+if 0b then begin
 pcal0 = pcal
 pcalfname = "/nwork/kouui/data-lvl1/dstpol/share/10830.pcal.WEST.20220420.ar.2.1.sav"
 restore, pcalfname
@@ -533,7 +534,7 @@ pars = pcal.pars
 pars_init = pars
 pcal = {mmdst_adjust_struct, conf:pcal0.conf, pars:pars, pars_init:pars_init, i2quv:fltarr(2,3)}
 print, "restored as initial parameter : ", pcalfname
-
+endif
 ;;-----------------------------------------------------
 ;; the first dataset for parameter selection
 s3d = sdata.s4d[*,*,*,0]

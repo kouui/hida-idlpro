@@ -7,7 +7,9 @@
 ;; history
 ;; 2022.04.21  k.u.  create to qlmap all dstpol data folders
 ;; 2022.04.21  k.u.  added wscan option to ku_qlmapall
-;; 2022.04.26  k.u   added axe to image; disable wlident
+;; 2022.04.26  k.u   added axe to image; disable wlident; 
+;;                   reverse file reading order to put the first data on the top
+;;                   (S4 scan : from top to bottom) 
 
 ;;----------------------------------------------------------------
 FUNCTION ku_generate_menu, rootdir

@@ -434,7 +434,7 @@ END
 ;; xc = -0.01423
 ;; tc = +0.00101
 
-FUNCTION mmdst_adjust, s, dst, wl0, bin=bin, sconf=sconf, path=path, anan=anan
+FUNCTION mmdst_adjust, s, dst, wl0, bin=bin, sconf=sconf, path=path, anan=anan, pcal_init=pcal_init
 ;PRO mmdst_adjust, path, 
 
 common mmadjust, pars, wds, wd, sdata, pdata
@@ -520,7 +520,12 @@ UNDEFINE,sseq & UNDEFINE,dstseq
 ;; initialize
 pars_anan = par_dst(wl0, sdata.dst[0].pos)
 ;;print,pars_anan
+if not keyword_set(pcal_init) then begin
 pars = {mmdst_pars, th_vs:0.0, sc:0.0, xn:pars_anan.xn, tn:pars_anan.tn, xc:pars_anan.xc, tc:pars_anan.tc}
+endif else begin
+pars = pcal_init.pars
+endelse
+
 pars_init = pars
 pcal = {mmdst_adjust_struct, conf:conf, pars:pars, pars_init:pars_init, i2quv:fltarr(2,3)}
 

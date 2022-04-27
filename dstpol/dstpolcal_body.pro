@@ -7,7 +7,7 @@
 ;	2022.04.07	k.i.,u.k.,	cal structure
 ;   2022.04.12  u.k.  
 ;	2022.04.16	k.i.,u.k.,	wdyesno() for save pcal, default th_offset from expo&rotp, rotp fix -> float  
-
+;   2022.04.25  u.k.    added workdir auto generation if not exist
 ;---------------------------------------------------------------------------
 
 ;        ['white'  , 'green'  , 'red'    , 'yellow']
@@ -324,17 +324,30 @@ endif
 com = 'demo & mmdst'
 if keyword_set(dinfo.telpos) then dst.pos = dinfo.telpos
 if dinfo.adj_dstpol then begin
-	pcal = mmdst_adjust(s0[*,*,0:3]/max(s0[*,*,0]), dst, dinfo.wl0, bin=bin) 
+	UNDEFINE, pcal_init
+	if keyword_set(_path_pcal_init) then restore, _path_pcal_init
+	pcal_init = pcal
+	pcal = mmdst_adjust(s0[*,*,0:3]/max(s0[*,*,0]), dst, dinfo.wl0, bin=bin, pcal_init=pcal_init) 
 	print, "--- PCAL.PARS inititial parameters "
 	help, pcal.pars_init
 	print, "--- PCAL.PARS result    parameters "
 	help, pcal.pars
 	com=com+'[from Zeeman]'
 endif else begin
-	if not file_test(cal.pcal) then begin
-		pcal = mmdst_adjust(s0[*,*,0:3]/max(s0[*,*,0]), dst, dinfo.wl0, bin=bin, /anan) 
-		com=com+'[from Anan]'
-	endif else com=com+'[from Zeeman]'
+	;; if has its own pcal file, use it
+	if file_test(cal.pcal) then begin
+		com=com+'[from Zeeman]'
+	endif else begin
+	;; no own pcal but has external as init, use it
+	  	if keyword_set(_path_pcal_init) then begin
+			restore, _path_pcal_init
+			com=com+'[from Zeeman]'
+	;; no own pcal no external init, use anan
+		endif else begin
+			pcal = mmdst_adjust(s0[*,*,0:3]/max(s0[*,*,0]), dst, dinfo.wl0, bin=bin, /anan) 
+			com=com+'[from Anan]'
+		endelse
+	endelse
 endelse
 s1 = correct_DSTpol(s0, dinfo.wl0, dst, sc=pcal.pars.sc, mm=mm, pars=pcal.pars)
 

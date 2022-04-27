@@ -14,6 +14,7 @@ _DATAROOT = '/mnt/HDD3TBn53/DST/sp/20220409/'
 _MY_WORKDIR = '/tmp_mnt/nwork/kouui/data-lvl1/dstpol/'
 _MY_FOLDER  = '20220409.prominence-experiment/'
 _IMG_FMT = 'png'  ; 'png', 'gif'
+_path_pcal_init = ''
 ;---------------------------------------------------------------------------
 obs = 'He.fl.2.3'
 ;dfobs = 'He.fl.5.1'
@@ -22,6 +23,7 @@ obs = 'He.fl.2.3'
 ;obs = 'cir.20220405'
 ;obs = 'cir'
 case obs of
+;;----[He.fl.2.3]----------------------------------------
     'He.fl.2.3': begin
 	_wave0 = '10830' & _exp0 = '15' & _rotp0 = '10' & _setname = 'fl.2.3'
 	path.rootdir = 	_DATAROOT + 'spec/He_I_10830/' ; root directory of raw dataset
@@ -66,7 +68,7 @@ case obs of
 	my_i2quv = [-0.015, 0.016, -0.0015]  
 	pmax0 = 0.002 
 	end
-
+;;----[He.fl.5.1]----------------------------------------
 	'He.fl.5.1': begin
 	_wave0 = '10830' & _exp0 = '15' & _rotp0 = '10' & _setname = 'fl.5.1'
 	path.rootdir = 	_DATAROOT + 'spec/He_I_10830/' ; root directory of raw dataset
@@ -111,7 +113,7 @@ case obs of
 	my_i2quv = [-0.0115,-0.001,0.003]  
 	pmax0 = 0.02 
 	end
-
+;;----[He.pr.1.3]----------------------------------------
 	'He.pr.1.3': begin
 	_wave0 = '10830' & _exp0 = '50' & _rotp0 = '10' & _setname = 'pr.1.3'
 	path.rootdir = 	_DATAROOT + 'spec/He_I_10830/' ; root directory of raw dataset

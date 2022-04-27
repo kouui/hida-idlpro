@@ -35,7 +35,7 @@ END
 
 ;;----------------------------------------------------------------
 
-PRO ku_qlmapAll, rootdir, file_ap, wid=wid, wscan=wscan, dinfo=dinfo, fitwl=fitwl
+PRO ku_qlmapAll, rootdir, file_ap, wid=wid, wscan=wscan, dinfo=dinfo, fitwl=fitwl, ilogopt=ilogopt
 
 if keyword_set(wscan) and (not keyword_set(dinfo)) then begin
     throw_error, "in case of using wscan keyword, please provide dinfo"
@@ -69,6 +69,7 @@ while 1b do begin
     ;j0 = nstep*dinfo.i_scan
     j0 = 0
 
+    ;; qlmap with wscan
     if keyword_set(wscan) then begin
         dd = 10
         wxs = 400
@@ -89,9 +90,9 @@ while 1b do begin
         if dinfo.wl_order eq 1 then prof=reverse(prof)
         if not keyword_set(wl) then begin
             if keyword_set(fitwl) then begin
-            wl = wlident(prof, dinfo.wl0, dinfo.wl_range)
+                wl = wlident(prof, dinfo.wl0, dinfo.wl_range)
             endif else begin
-            wl = indgen(ny)
+                wl = indgen(ny)
             endelse
             ;if dinfo.wl_order eq 1 then wl=reverse(wl)
             ;wdelete, 0
@@ -111,21 +112,31 @@ while 1b do begin
             ;cursor, x, y, /data, /change
             cursor, x, y, /device, /change
             ;print, !mouse
-            ; mouse left click to change image scale
-            if (!mouse.button eq 1) and $
-                ((x-tvsclpos[0])*(x-tvsclpos[0]-wxim) lt 0) and $
-                ((y-tvsclpos[1])*(y-tvsclpos[1]-wyim) lt 0) and $
-                (last_button ne 1) then begin
-                    islog=~islog
-                    if islog then scale = 'log' else scale = 'linear'
-                    print, '[QLMAP] image scale -> '+scale+' scale'
-            endif
-            last_button = !mouse.button
-            ; mouse right clicked to quit
-            if !mouse.button eq 4 then begin 
-                wait, 0.5
-                break
-            endif
+
+            ;; left click to switch scale and right click to quit
+            if keyword_set(ilogopt) then begin 
+                ; mouse left click inside the image to change image scale
+                if (!mouse.button eq 1) and $
+                    ((x-tvsclpos[0])*(x-tvsclpos[0]-wxim) lt 0) and $
+                    ((y-tvsclpos[1])*(y-tvsclpos[1]-wyim) lt 0) and $
+                    (last_button ne 1) then begin
+                        islog=~islog
+                        if islog then scale = 'log' else scale = 'linear'
+                        print, '[QLMAP] image scale -> '+scale+' scale'
+                endif
+                last_button = !mouse.button
+                ; mouse right clicked to quit
+                if !mouse.button eq 4 then begin 
+                    wait, 0.5
+                    break
+                endif
+            ;; quit with any click
+            endif else begin
+                if !mouse.button ne 0 then begin 
+                    wait, 0.5
+                    break
+                endif
+            endelse
             ;if (x lt xr[0]) or (x gt xr[1]) then continue
             ;if (y lt yr[0]) or (y gt yr[1]) then continue
             ;print, "x,y = ", x, y
@@ -133,6 +144,7 @@ while 1b do begin
             if (x lt plotpos[0]) or (x gt plotpos[2]) then continue
             if (y lt plotpos[1]) or (y gt plotpos[3]) then continue
             
+            ;; move cursor inside profile axe to shift wavelength
             x=fix( xr[0]+(x-plotpos[0])*float(xr[1]-xr[0]+1)/(plotpos[2]-plotpos[0]+1) )
             _tmp = min(abs(wl-x), xpos)
             if dinfo.wl_order eq 1 then xpos = ny-1-xpos
@@ -142,6 +154,7 @@ while 1b do begin
 
         endwhile
         wdelete, wid
+    ;; qlmap without wscan
     endif else begin
         window,wid,xs=nx,ys=ny
         tvscl,sp1

@@ -13,6 +13,7 @@ _DATAROOT = '/mnt/HDD3TBn52/DST/sp/20220420/'
 _MY_WORKDIR = '/tmp_mnt/nwork/kouui/data-lvl1/dstpol/'
 _MY_FOLDER  = '20220420.xclass-ar/'
 _IMG_FMT = 'png'  ; 'png', 'gif'
+_path_pcal_init = ''
 ;---------------------------------------------------------------------------
 ; 
 

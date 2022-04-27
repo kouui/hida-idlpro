@@ -13,6 +13,7 @@ _DATAROOT = '/mnt/HDD3TBn53/DST/sp/20220405/'
 _MY_WORKDIR = '/tmp_mnt/nwork/kouui/data-lvl1/dstpol/'
 _MY_FOLDER  = '20220405.various-target/'
 _IMG_FMT = 'png'  ; 'png', 'gif'
+_path_pcal_init = ''
 ;---------------------------------------------------------------------------
 ; 
 
@@ -20,7 +21,7 @@ obs = 'He.ar.1.1'
 ;obs = 'He.pr.1.6'
 ;obs = 'He.ar.1.2'
 case obs of
-;;--------------------------------------------
+;;--'He.ar.1.1'-------------------------------
 	'He.ar.1.1': begin
 	_wave0 = '10830' & _exp0 = '15' & _rotp0 = '10' & _setname = 'ar.1.1'
 	path.rootdir = 	_DATAROOT + 'spec/He_I_10830/' ; root directory of raw dataset
@@ -63,7 +64,7 @@ case obs of
 	my_i2quv = [0, 0., 0]   ; WEST with WEST pcal
 	pmax0 = 0.005 
 	end
-;;--------------------------------------------
+;;--'He.ar.1.2'-------------------------------
 	'He.ar.1.2': begin
 	_wave0 = '10830' & _exp0 = '15' & _rotp0 = '10' & _setname = 'ar.1.2'
 	path.rootdir = 	_DATAROOT + 'spec/He_I_10830/' ; root directory of raw dataset
@@ -106,7 +107,7 @@ case obs of
 	my_i2quv = [0, 0., 0]   ; WEST with WEST pcal
 	pmax0 = 0.005 
 	end
-;;--------------------------------------------
+;;--'He.pr.1.4'-------------------------------
 	'He.pr.1.4': begin
 	_wave0 = '10830' & _exp0 = '100' & _rotp0 = '20' & _setname = 'pr.1.4'
 	path.rootdir = 	_DATAROOT + 'spec/He_I_10830/' ; root directory of raw dataset
@@ -148,7 +149,7 @@ case obs of
 	my_i2quv = [0.01, 0.00, 0.]     ; pcal 20220405
 	pmax0 = 0.005
 	end
-;;--------------------------------------------
+;;--'He.pr.1.6'-------------------------------
 	'He.pr.1.6': begin
 	_wave0 = '10830' & _exp0 = '60' & _rotp0 = '15' & _setname = 'pr.1.6'
 	path.rootdir = 	_DATAROOT + 'spec/He_I_10830/' ; root directory of raw dataset

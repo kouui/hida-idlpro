@@ -1,6 +1,7 @@
 ;  dst_pollib
 ;   2022.04.12  u.k.    copy from /home/ichimoto/idlpro/hida/dstpol/dst_pollib.pro 
 ;   2022.04.12  u.k.    added wexist keyword to dispiquvr
+;   2022.05.03  u.k.    added ku_mk_drkflt, skip flat processing if flat_org exist
 ;********************************************************************
 pro dispwliquvr,i,q,u,v,r,bin=bin,pmax=pmax,coms=coms,ialog=ialog,wid=wid,ipos=ipos,dd=dd, $
 	isigma=isigma,title=title,wexist=wexist,yoffset=yoffset
@@ -47,6 +48,50 @@ if n_elements(ipos) ne 0 then begin
 		draw,x0+ipos/bin*[1,1],dd+[0,ny2]+yoffset,line=1
 	endfor
 endif
+
+end
+
+;********************************************************************
+pro ku_mk_drkflt, darkfiles,flatfiles,drk,avflt, flatdark=flatdark,savfile=savfile,hd=hd,hf=hf
+; make dark & flat average  ->  drk[nx,ny],  avflt[nx,ny,nn]
+
+	drks = read_dstfits(darkfiles[0],hd,cam=cam,dst=dst,tim=tim)
+	imgsize,drks,nx,ny,nnd
+	drks = rm_badframe(drks)
+	drk = rebin(drks,nx,ny,1)
+	if file_test(savfile.flat_org) then begin
+		save,drk,hd,file=savfile.dark
+		print,'dark saved in ',savfile.dark
+		print,'flat processing skipped : found ', savfile.flat_org
+		return
+	endif
+	nflt = n_elements(flatfiles)
+	flt1 = read_dstfits(flatfiles[0],hf,cam=cam,dst=dst,tim=tim)
+	imgsize,flt1,nx,ny,nnf
+	avflt = float(flt1)
+	count=0
+	for i=1,nflt-1 do begin
+		print,'flat-',string(i+1,nflt,form='(i3,"/",i3)'),'  ',flatfiles[i]
+		flt1 = read_dstfits(flatfiles[i],hf,cam=cam,dst=dst,tim=tim)
+		if min(flt1) gt 0 then begin
+			avflt = avflt+flt1
+			count = count+1
+		endif else print,'Skip a bad flat..'
+	endfor
+	avflt = avflt/count
+	if keyword_set(flatdark) then begin
+		print,'flatdark..  ',flatdark[0]
+		fdrks = read_dstfits(flatdark[0],hd,cam=cam,dst=dst,tim=tim)
+		fdrks = rm_badframe(fdrks)
+		fdrk = rebin(fdrks,nx,ny,1)
+	endif else fdrk = drk
+	for j=0,nnf-1 do avflt[*,*,j] = avflt[*,*,j]-fdrk
+	if keyword_set(savfile) then begin
+		save,drk,hd,file=savfile.dark
+		print,'dark saved in ',savfile.dark
+		save,avflt,hf,file=savfile.flat_org
+		print,'flat saved in ',savfile.flat_org
+	endif
 
 end
 

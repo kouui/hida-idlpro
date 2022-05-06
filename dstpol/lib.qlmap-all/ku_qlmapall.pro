@@ -83,7 +83,7 @@ while 1b do begin
             j = nstep-1-jj
             print,j,'  ',files[j0+j]
             sp1 = readfits(files[j0+j],h,nslice=1)
-            sps[*,*,j] = sp1[ap.ix1:ap.ix2,*]
+            sps[*,*,jj] = sp1[ap.ix1:ap.ix2,*]
         endfor
         im = congrid(reform(sps[*,250,*]),wxim,wyim)
         prof = reform(rebin(sps[nxp/2-5:nxp/2+5,*,nstep/2],1,ny,1))
@@ -133,7 +133,7 @@ while 1b do begin
             ;; quit with any click
             endif else begin
                 if !mouse.button ne 0 then begin 
-                    wait, 0.5
+                    wait, 0.1
                     break
                 endif
             endelse

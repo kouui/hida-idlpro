@@ -8,6 +8,7 @@
 ;   2022.04.12  u.k.  
 ;	2022.04.16	k.i.,u.k.,	wdyesno() for save pcal, default th_offset from expo&rotp, rotp fix -> float  
 ;   2022.04.25  u.k.    added workdir auto generation if not exist
+;   2022.05.02  u.k.    in demoparam., show demo only stokes
 ;---------------------------------------------------------------------------
 
 ;        ['white'  , 'green'  , 'red'    , 'yellow']
@@ -83,7 +84,7 @@ if not keyword_set(rfiles.dark) then begin & print,'dark not defined' & stop & e
 if not keyword_set(rfiles.flat) then begin & print,'flat not defined' & stop & end
 calpardir = path.workdir+path.calpardir
 if not file_test(calpardir) then file_mkdir,calpardir
-mk_drkflt, rfiles.dark,rfiles.flat,drk,avflt, flatdark=rfiles.flatdark, hd=hd,hf=hf ,savfile=cal
+ku_mk_drkflt, rfiles.dark,rfiles.flat,drk,avflt, flatdark=rfiles.flatdark, hd=hd,hf=hf ,savfile=cal
 
 stop
 
@@ -186,7 +187,7 @@ window,2,xs=1550,ys=500
 plot,mprof2,title='modullation w/ polarizer',chars=2
 oplot,mprof1,line=2,col=250
 
-th = findgen(nn)/nn * dinfo.expo * nn /dinfo.rotp * 2*!pi	; position of WP, [rad]
+th = 1.*findgen(nn)/nn * dinfo.expo * nn /dinfo.rotp * 2*!pi	; position of WP, [rad]
 ; DAT = AV + AMP * sin(K * XX + PH)
 fit1 = ta_sinfit_mpfit(th,mprof1,av=av1,amp=amp1,k=k1,ph=ph1) 
 fit2 = ta_sinfit_mpfit(th,mprof2,av=av2,amp=amp2,k=k2,ph=ph2) 
@@ -206,15 +207,15 @@ dinfo.nrot = expo*nn/rotp*k/4.	; # of waveplate rotation in a set
 ;dinfo.th_offset = th_offset
 if dinfo.telpos eq '' then dinfo.telpos = dst.pos	; DST position 'WEST' or 'EAST'
 case dinfo.wl_order of
-   0: dinfo.rotang = -45. 
-   1: dinfo.rotang = 45. 
+   0: dinfo.rotang = +45. 
+   1: dinfo.rotang = -45. 
 endcase
 
 ;----  determine th_offset ---
 print,'eliminate R by adjusting th_offset..'
 j0 = dinfo.nstep*dinfo.i_scan
 file1 = rfiles.files[j0+dinfo.j_pos]
-;file1 = rfiles.polarizer[1]
+if _check_polarizer then file1 = rfiles.polarizer[1]
 print,dinfo.j_pos,'  reading ',file1
 sps = read_dstfits(file1,h,cam=cam,dst=dst,tim=tim)
 
@@ -265,7 +266,7 @@ endif
 
 if dinfo.div eq '' then pmax = pmax0 * max(s0[*,*,0]) else pmax=pmax0
 s1=s0
-s1[*,*,0:3] = correct_DSTpol(s0, dinfo.wl0, dst, sc=sc, mm=mm, pars=pars)
+;if not _check_polarizer then s1[*,*,0:3] = correct_DSTpol(s0, dinfo.wl0, dst, sc=sc, mm=mm, pars=pars)
 bin = binfact(s0)
 dispiquvr,s1,bin=bin,pmax=pmax,/ialog,title='demo & mmdst '+com
 means = rebin(s1,1,1,5) &	print,"mean of IQUVR/I = ", reform(means,5)/means[0]
@@ -274,9 +275,10 @@ ans = wdgetstr(com,xpos=500,ypos=300,title='eliminate R')
 while ans ne '' do begin
 	dinfo.th_offset = float(ans)
 	s0 = dualsp_demodulate(spsl,spsr,ap,dinfo,sl=sl,sr=sr) ; spls,sprs[nxp,nyp,nn],  sl,sr[nxp,nyp,5]
-	s1[*,*,0:3] = correct_DSTpol(s0, dinfo.wl0, dst, sc=sc, mm=mm, pars=pars)
-	s1[*,*,4] = s0[*,*,4]
-	;s1 = s0
+	;s1[*,*,0:3] = correct_DSTpol(s0, dinfo.wl0, dst, sc=sc, mm=mm, pars=pars)
+	;s1[*,*,4] = s0[*,*,4]
+	;if _check_polarizer then s1 = s0
+	s1 = s0
 	dispiquvr,s1,bin=bin,pmax=pmax,/ialog,title='demo & mmdst '+com
 	means = rebin(s1,1,1,5) &	print,"mean of IQUVR/I = ", reform(means,5)/means[0]
 	com = 'th_offset = '+string(dinfo.th_offset,form='(f7.2)')+'   ==> '
@@ -325,22 +327,22 @@ com = 'demo & mmdst'
 if keyword_set(dinfo.telpos) then dst.pos = dinfo.telpos
 if dinfo.adj_dstpol then begin
 	UNDEFINE, pcal_init
-	if keyword_set(_path_pcal_init) then restore, _path_pcal_init
-	pcal_init = pcal
+	if keyword_set(_path_pcal_init) then begin
+		restore, _path_pcal_init
+		pcal_init = pcal
+	endif
 	pcal = mmdst_adjust(s0[*,*,0:3]/max(s0[*,*,0]), dst, dinfo.wl0, bin=bin, pcal_init=pcal_init) 
-	print, "--- PCAL.PARS inititial parameters "
-	help, pcal.pars_init
-	print, "--- PCAL.PARS result    parameters "
-	help, pcal.pars
+	print_pcal, pcal, dinfo=dinfo
 	com=com+'[from Zeeman]'
 endif else begin
 	;; if has its own pcal file, use it
-	if file_test(cal.pcal) then begin
+	if not keyword_set(_force_pcal_init) and file_test(cal.pcal) then begin
 		com=com+'[from Zeeman]'
 	endif else begin
 	;; no own pcal but has external as init, use it
 	  	if keyword_set(_path_pcal_init) then begin
 			restore, _path_pcal_init
+			print, "using pcal from :", _path_pcal_init
 			com=com+'[from Zeeman]'
 	;; no own pcal no external init, use anan
 		endif else begin

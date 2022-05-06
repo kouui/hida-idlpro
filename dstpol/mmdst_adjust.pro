@@ -305,6 +305,7 @@ help, conf_symfit
 s = size(sdata.s4d)
 s4d = reform(sdata.s4d,s[1],s[2],s[3],1)
 help,s4d
+print, "s4d[",conf_symfit.islit1,":",conf_symfit.islit2,",*,*,0]"
          pars_fit = MPFIT_PARDST(conf_symfit, s4d[conf_symfit.islit1:conf_symfit.islit2,*,*,0], $
 		sdata.dst, parinit, parinfo, err, weight, niter=niter)
 			;;pars_fit = TEST_MPFIT_PARDST(s4, dst)
@@ -521,8 +522,10 @@ UNDEFINE,sseq & UNDEFINE,dstseq
 pars_anan = par_dst(wl0, sdata.dst[0].pos)
 ;;print,pars_anan
 if not keyword_set(pcal_init) then begin
+print, '[mmdst_adjust] used Anan pars as init condition'
 pars = {mmdst_pars, th_vs:0.0, sc:0.0, xn:pars_anan.xn, tn:pars_anan.tn, xc:pars_anan.xc, tc:pars_anan.tc}
 endif else begin
+print, '[mmdst_adjust] used external pcal.pars as init condition'
 pars = pcal_init.pars
 endelse
 
@@ -535,6 +538,7 @@ if 0b then begin
 pcal0 = pcal
 pcalfname = "/nwork/kouui/data-lvl1/dstpol/share/10830.pcal.WEST.20220420.ar.2.1.sav"
 restore, pcalfname
+print, '[mmdst_adjust] init pars from : ', pcalfname
 pars = pcal.pars
 pars_init = pars
 pcal = {mmdst_adjust_struct, conf:pcal0.conf, pars:pars, pars_init:pars_init, i2quv:fltarr(2,3)}
@@ -555,7 +559,8 @@ for i=0,n_elements(names)-1 do msg_arr = [msg_arr,['click left button to select 
 
 if (conf.sconf.islit1 eq -1) or (conf.sconf.islit2 eq -1) then begin
    xpos2 = select_xpos(s3d, pmax=0.01, wid=20, bin=bin, /islabel, msg_arr=msg_arr)
-   if xpos2[0] > xpos2[1] then xpos2 = reverse(xpos2)
+   ;if xpos2[0] > xpos2[1] then xpos2 = reverse(xpos2)
+   xpos2 = minmax(xpos2)
    conf.sconf.islit1 = xpos2[0] & conf.sconf.islit2 = xpos2[1]
 endif
 UNDEFINE, names & UNDEFINE, msg_arr & UNDEFINE, i & UNDEFINE, xpos2

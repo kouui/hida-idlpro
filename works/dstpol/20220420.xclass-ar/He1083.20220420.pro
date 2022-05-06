@@ -14,12 +14,14 @@ _MY_WORKDIR = '/tmp_mnt/nwork/kouui/data-lvl1/dstpol/'
 _MY_FOLDER  = '20220420.xclass-ar/'
 _IMG_FMT = 'png'  ; 'png', 'gif'
 _path_pcal_init = ''
+_force_pcal_init = 0b
+_check_polarizer = 0b
 ;---------------------------------------------------------------------------
 ; 
 
-;obs = 'He.ar.2.1'
+obs = 'He.ar.2.1'
 ;obs = 'He.ar.2.3'
-obs = 'He.ar.5.1'
+;obs = 'He.ar.5.1'
 ;obs = 'He.ar.2.2'
 ;obs = 'view'
 case obs of
@@ -53,7 +55,7 @@ case obs of
 
 	dinfo.nstep = 80 		; # of steps for 1 scan, if -1 do all data in obsdir
 	dinfo.i_scan = 0 		; scan # for testing cal.
-	dinfo.j_pos = 60 		; position # in a scan for test
+	dinfo.j_pos = 60;2 		; position # in a scan for test
 	dinfo.wl0 = 10830. 		; central wavelength [A]
 	dinfo.wl_range = 15.		; apporox. wavelength range [A] 	
 	dinfo.wl_order = 1.		; 0: top is red, 1: top is blue  -> left sp is +U or -U
@@ -65,8 +67,11 @@ case obs of
 	dinfo.adj_dstpol = 1		; if 1, adjust DST pol.parms using Zeemen in sunspot 
 	dinfo.correct_I2quv = 2		; 0 - no correction, 1 - use pcal.i2quv[2,3],  2 - get i2quv from itself
 	
+	_check_polarizer = 0b
+	_force_pcal_init = 0b
+	_path_pcal_init = path.workdir + path.outdir + '/../ar.2.2/'  +	_wave0+'.pcal.sav'
 	my_i2quv = [0, 0., 0]   ; WEST with WEST pcal
-	pmax0 = 0.02 
+	pmax0 = 0.002 
 	end
 ;;----[He.ar.2.3]----------------------------------------
 	'He.ar.2.3': begin
@@ -99,7 +104,7 @@ case obs of
 
 	dinfo.nstep = 80 		; # of steps for 1 scan, if -1 do all data in obsdir
 	dinfo.i_scan = 0 		; scan # for testing cal.
-	dinfo.j_pos = 40 		; position # in a scan for test
+	dinfo.j_pos = 35 		; position # in a scan for test
 	dinfo.wl0 = 10830. 		; central wavelength [A]
 	dinfo.wl_range = 15.		; apporox. wavelength range [A] 	
 	dinfo.wl_order = 1.		; 0: top is red, 1: top is blue  -> left sp is +U or -U
@@ -108,7 +113,7 @@ case obs of
 	;dinfo.th_offset = 26.5		; from #1, offset angle of waveplate to eliminate R, deg.
 	dinfo.div = 'c'			; divide QUV by continuum 'c',  intensity 'i', and non ''
 	dinfo.xalign = 0		; align in slit direction
-	dinfo.adj_dstpol = 0		; if 1, adjust DST pol.parms using Zeemen in sunspot 
+	dinfo.adj_dstpol = 1		; if 1, adjust DST pol.parms using Zeemen in sunspot 
 	dinfo.correct_I2quv = 2		; 0 - no correction, 1 - use pcal.i2quv[2,3],  2 - get i2quv from itself
 	
 	my_i2quv = [0, 0., 0]   ; WEST with WEST pcal
@@ -138,14 +143,13 @@ case obs of
 	cal.ap = calpardir+	_wave0+'.ap.sav'		; alignment params.
 	cal.dinfo = path.workdir + path.outdir +	'dinfo.sav'	; data info.
 	cal.pcal = path.workdir + path.outdir +	_wave0+'.pcal.sav'	; polari. calib params.
-	cal.pcal = path.workdir + path.outdir+"../ar.2.1/" +	_wave0+'.pcal.sav'
 	cal.wl = calpardir+	_wave0+'.wl.sav'		; wavelength wl[*]
 
 	if file_test(cal.dinfo) then restore,cal.dinfo
 
 	dinfo.nstep = 80 		; # of steps for 1 scan, if -1 do all data in obsdir
 	dinfo.i_scan = 0 		; scan # for testing cal.
-	dinfo.j_pos = 40 		; position # in a scan for test
+	dinfo.j_pos = 37;10 		; position # in a scan for test
 	dinfo.wl0 = 10830. 		; central wavelength [A]
 	dinfo.wl_range = 15.		; apporox. wavelength range [A] 	
 	dinfo.wl_order = 1.		; 0: top is red, 1: top is blue  -> left sp is +U or -U
@@ -154,11 +158,14 @@ case obs of
 	;dinfo.th_offset = 26.5		; from #1, offset angle of waveplate to eliminate R, deg.
 	dinfo.div = 'c'			; divide QUV by continuum 'c',  intensity 'i', and non ''
 	dinfo.xalign = 0		; align in slit direction
-	dinfo.adj_dstpol = 0		; if 1, adjust DST pol.parms using Zeemen in sunspot 
+	dinfo.adj_dstpol = 1		; if 1, adjust DST pol.parms using Zeemen in sunspot 
 	dinfo.correct_I2quv = 2		; 0 - no correction, 1 - use pcal.i2quv[2,3],  2 - get i2quv from itself
 	
+	_check_polarizer = 0b
+	_force_pcal_init = 0b
+	_path_pcal_init = '';path.workdir +  '/../20220405.various-target/ar.1.1/'  +	_wave0+'.pcal.sav'
 	my_i2quv = [0, 0., 0]   ; WEST with WEST pcal
-	pmax0 = 0.02 
+	pmax0 = 0.01 
 	end
 ;;----[He.ar.5.1]----------------------------------------
 	'He.ar.5.1': begin

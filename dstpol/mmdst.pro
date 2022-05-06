@@ -372,12 +372,12 @@ if not keyword_set(delta_ex) then delta_ex = 0.
 if not keyword_set(t_ex)     then t_ex = 0.
 if not keyword_set(qin)      then qin = 'east-west'
 
-incli1 = -incli		; <== originary +incli
+incli1 = +(incli+0.5*!pi)		; <== originary +incli
 
 ; definition of +Q on the sun
 if qin eq 'slit' then begin
 	; +Q on the sun is perpendicular to the slit
-	R_sun2ew=muellermatrix_rot(incli1)	
+	R_sun2ew=muellermatrix_rot(-incli1)	
 	print,'+Q in slit direction'
 endif else begin
 	; +Q on the sun is east-west on celestial sphere
@@ -397,11 +397,11 @@ phi_N = za
 if not keyword_set(hsp) then begin
     
     if telpos eq 'WEST' then begin
-            phi_C = -zd
-            phi_v = +zd-za-incli1
+        phi_C = -zd
+        phi_v = +zd-za+incli1
     endif else begin
 	    phi_C = +zd
-	    phi_v = -zd-za-incli1
+	    phi_v = -zd-za+incli1
     endelse
     
 endif else begin

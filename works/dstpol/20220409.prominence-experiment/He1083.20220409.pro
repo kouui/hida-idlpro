@@ -15,6 +15,8 @@ _MY_WORKDIR = '/tmp_mnt/nwork/kouui/data-lvl1/dstpol/'
 _MY_FOLDER  = '20220409.prominence-experiment/'
 _IMG_FMT = 'png'  ; 'png', 'gif'
 _path_pcal_init = ''
+_force_pcal_init = 0b
+_check_polarizer = 0b
 ;---------------------------------------------------------------------------
 obs = 'He.fl.2.3'
 ;dfobs = 'He.fl.5.1'
@@ -44,7 +46,7 @@ case obs of
 	cal.flat = calpardir+	_wave0+'.flat.sav'		; fltl,fltr,avfltl,avfltr,fltspl,fltspr [nxp,ny] 
 	cal.ap = calpardir+	_wave0+'.ap.sav'		; alignment params.
 	cal.dinfo = path.workdir + path.outdir +	'dinfo.sav'	; data info.
-	cal.pcal = path.workdir + path.outdir + '../../share/' +	_wave0+'.pcal.WEST.20220405.ar.1.1.sav'	; polari. calib params.
+	cal.pcal = path.workdir + path.outdir + _wave0+'.pcal.sav'	; polari. calib params.
 	;cal.pcal = path.workdir + path.outdir + 	_wave0+'.pcal.sav'	; polari. calib params.
 
 	cal.wl = calpardir+	_wave0+'.wl.sav'		; wavelength wl[*]
@@ -65,8 +67,11 @@ case obs of
 	dinfo.adj_dstpol = 0		; if 1, adjust DST pol.parms using Zeemen in sunspot 
 	dinfo.correct_I2quv = 2		; 0 - no correction, 1 - use pcal.i2quv[2,3],  2 - get i2quv from itself
 	
+	check_polarizer = 0b
+        _force_pcal_init = 1b
+        _path_pcal_init = path.workdir + path.outdir + '/../../20220420.xclass-ar/ar.2.1/' + _wave0 + '.pcal.sav'
 	my_i2quv = [-0.015, 0.016, -0.0015]  
-	pmax0 = 0.002 
+	pmax0 = 0.002
 	end
 ;;----[He.fl.5.1]----------------------------------------
 	'He.fl.5.1': begin

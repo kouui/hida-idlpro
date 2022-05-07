@@ -774,6 +774,8 @@ ku_qlmapAll, path.rootdir, cal.ap, wid=7, /wscan, dinfo=dinfo
 
 stop
 
+;;----------------------------------------------------------------------------------------
+;; parallel processing all data files in the folder
 obscalpara:
 
 ;; prepare for parallel processing
@@ -785,9 +787,9 @@ if not _USER_NCORE then begin
 		UNDEFINE, _USER_NCORE
 		goto, obscal
 	endif
-	_NCORE=1
+	_NCORE=4
 endif
-;if _NCORE gt 3 then _NCORE=3
+if _NCORE gt 10 then _NCORE=10
 print, '>> calibrate obs. data sequence para with _NCORE=',string(_NCORE,form='(i2)'),' <<'
 
 ;; restore necessary calibration data
@@ -813,7 +815,7 @@ if not file_test(s0outdir) then file_mkdir,s0outdir
 ;; select uncached files
 s0files=[] & sel_files=[] & sel_s0savs=[]
 for j=0,nstep-1 do begin
-	file = files[j]
+	if dinfo.nstep eq -1 then file = files[j] else file = files[dinfo.i_scan*dinfo.nstep+j]
 	fname = FILE_BASENAME(file, '.fits')
 	s0file = s0outdir+fname+'.s0.sav'
 	s0files = [s0files,[s0file]]
@@ -832,18 +834,40 @@ print, nselect, ' files to be demodulated.'
 ;; it is possible to use `br[i]->Status()` to check thread status    |
 ;; so that we don't need to create batch file                        |
 ;;----------------------------------------------------------------------------------------
-if nselect gt 0 then begin  ;; make batches
+;;----------------------------------------------------------------------------------------
+;; in case of we have file to be demodulate
+if nselect gt 0 then begin	
+;;----------------------------------------------------------------------------------------
+;; how many cores to use also depends on how many files we want to process
+	_NCORE = min([_NCORE,nselect/2+1])
 	if _NCORE gt 1 then brs = objarr(_NCORE-1)
+;;----------------------------------------------------------------------------------------
 	for i=0,_NCORE-1 do begin
+;;----------------------------------------------------------------------------------------
+;; seperate _NCORE batches for 
+;; fbatch : [*.fits, ...]
+;; sbatch : [*.s0.sav, ...]
 		fbatch=[] & sbatch=[] 
 		for j=0,nselect-1 do begin
 			if ((j mod _NCORE) ne i) then continue
 			fbatch = [fbatch,[sel_files[j]]]
 			sbatch = [sbatch,[sel_s0savs[j]]]
 		endfor
-		if i eq (_NCORE-1) then begin  ;; current thread
-			dualdemo_cache_files, fbatch, sbatch, drk, fltl, fltr, ap, dinfo, workid=i
-		endif else begin ;; background thread
+;;----------------------------------------------------------------------------------------
+;; in current thread, we process the last batch, dispiquvr of s0
+		if i eq (_NCORE-1) then begin
+			nf1=n_elements(fbatch)
+			for k=0, n_elements(fbatch)-1 do begin
+				file = fbatch[k] & outfile = sbatch[k]
+				print, string(k+1,form='(i3)')+'/'+string(nf1,form='(i3)')+'  processing : ', file
+				dualdemo_cache, file, outfile, drk, fltl, fltr, ap, dinfo, ' ', s0=s0
+				if dinfo.div eq '' then pmax = pmax0 * max(s0[*,*,0]) else pmax=pmax0
+				dispiquvr,s0,bin=bin,pmax=pmax,/ialog,wid=0,title='demo only'
+			endfor
+			;dualdemo_cache_files, fbatch, sbatch, drk, fltl, fltr, ap, dinfo, workid=i
+;;----------------------------------------------------------------------------------------
+;; background thread
+		endif else begin 
 			;;if not keyword_set(brs) then throw_error, "objarr of IDL_IDLbridge is not yet created: brs undefined"
 			file_dinfo=s0outdir+'dinfo.'+string(i,form='(i1)')+'.sav'
 			save, dinfo, filename=file_dinfo
@@ -860,21 +884,25 @@ if nselect gt 0 then begin  ;; make batches
 			brs[i]->SetVar,'file_dinfo',file_dinfo
 			brs[i]->SetVar,'workid',i
 			brs[i]->execute,'dualdemo_cache_files,fbatch,sbatch,drk,fltl,fltr,ap,dinfo,workid=workid,file_ap=file_ap,file_dinfo=file_dinfo',/nowait
-			print, 'Started IDL_BRIDGE ', i		
+			print, 'Started IDL_BRIDGE No.', i		
 		endelse		
 	endfor
+;;----------------------------------------------------------------------------------------
+;; destroy IDL_BRIDGEs
 	if keyword_set(brs) then for i=0,n_elements(brs)-1 do begin
 		WHILE (brs[i]->Status() NE 0) DO WAIT, 0.5
 		OBJ_DESTROY, brs[i]
-		print, 'Destroied IDL_BRIDGE ', i
+		print, 'Destroied IDL_BRIDGE No.', i
 	endfor
+	UNDEFINE, brs
+;;----------------------------------------------------------------------------------------
 endif
 
-;; process s0 -> s
 
 gifdir = outdir+'iquv/'
 if not file_test(gifdir) then file_mkdir,gifdir
-
+;;----------------------------------------------------------------------------------------
+;; process s0 -> s
 for j=0,n_elements(s0files)-1 do begin
 	s0file = s0files[j]
 	file1  = files[j] 
@@ -928,7 +956,7 @@ for j=0,n_elements(s0files)-1 do begin
 	print,'s,pcal,dinfo,h,xprof,dx  saved in ',outfile
 	;win2gif,workdir+outdir+'iquvimg/'+fnam+'.gif'
 endfor
-
+;;----------------------------------------------------------------------------------------
 
 
 if not _USER_NCORE then UNDEFINE, _NCORE
@@ -936,6 +964,8 @@ UNDEFINE, _USER_NCORE
 
 stop
 
+;;----------------------------------------------------------------------------------------
+;; clear IDL_BRIDGEs manually
 obscalparaclear:
 if keyword_set(brs) then for i=0,n_elements(brs)-1 do begin
 	;brs[i]->Abort
@@ -943,6 +973,7 @@ if keyword_set(brs) then for i=0,n_elements(brs)-1 do begin
 	print, 'Destroied IDL_BRIDGE ', i
 endfor
 UNDEFINE, brs
+;;----------------------------------------------------------------------------------------
 
 stop
 

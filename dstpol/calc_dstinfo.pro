@@ -1,0 +1,74 @@
+; calc_dstpos
+;    date_obs  ->  dst[*,11]
+;  return dst[3,11]
+
+;   2022.01.14	k.i., u.k.
+;   2022.04.04	k.i., u.k.	incli of mandatory
+
+;-----------------------------------------------------------------
+function val2ang,val
+
+deg = fix(val)
+sec = fix((val-deg)*3600)
+mm  = sec/60
+sec = sec mod 60
+return,[deg,mm,sec]
+
+end
+
+;-----------------------------------------------------------------
+function calc_dstinfo,DATE_OBS,incli,telpos=telpos
+
+; DATE_OBS= '2021-10-10T09:41:57.911' 
+;  incli: angle between slit and sky north [deg.]
+
+if not keyword_set(telpos) then telpos='WEST'
+
+;  calc. solar height & azimuth 
+;  ref. http://k-ichikawa.blog.enjoy.jp/etc/HP/js/sunShineAngle/ssa.html
+
+lat = 36.25	; Hida
+lon = 137.30
+omg = 2*!pi/365.25
+rad = 1./180.*!pi
+
+yr = strmid(DATE_OBS,0,4)
+mon = strmid(DATE_OBS,5,2)
+day = strmid(DATE_OBS,8,2)
+hh = strmid(DATE_OBS,11,2)
+mm = strmid(DATE_OBS,14,2)
+ss = strmid(DATE_OBS,17,2)
+J = julday(mon,day,yr)-julday(1,1,yr)	; day of year
+
+; ê‘åo [deg.]
+del = 0.33281d - 22.984d * cos(omg*J) - 0.34990d * cos(2*omg*J) - 0.13980d *cos(3*omg*J) $
+      + 3.7872d *sin(omg*J) + 0.03250d *sin(2*omg*J) + 0.07187d *sin(3*omg*J)
+; ãœéûç∑
+e = 0.0072d *cos(omg*J ) - 0.0528d *cos(2*omg*J ) - 0.0012d *cos(3*omg*J ) $
+      - 0.1229d *sin(omg*J ) - 0.1565d *sin(2*omg*J ) - 0.0041d *sin(3*omg*J )
+
+Ts = hh+mm/60.+ss/3600.
+T = Ts + (lon - 135)/15 + e
+th = 15.*T - 180.	; time [deg.]
+
+h = asin(sin(lat*rad)*sin(del*rad) + cos(lat*rad)*cos(del*rad)*cos(th*rad))  ; çÇìx [rad]
+
+sA = cos(del*rad)*sin(th*rad)/cos(h)
+cA = (sin(h)*sin(lat*rad) - sin(del*rad))/cos(h)/cos(lat*rad)
+A = atan(sA, cA)/rad 	; azimuth [deg.]
+z = (!pi/2 - h)/rad	; zenith dist. [deg.]
+
+ha = th/360.*24	; hr
+if ha lt 0 then ha=ha+24.
+if A lt 0 then A=A+360.
+dst = intarr(3,11)
+dst[*,0] = val2ang(ha)
+dst[*,1] = val2ang(z)
+dst[*,9] = val2ang(A)	
+if incli lt 0 then incli=incli+360
+dst[*,4] = val2ang(incli)
+if telpos eq 'WEST' then dst[*,10]=[0,0,1] else dst[*,10]=[0,0,0]
+
+return,dst
+
+end

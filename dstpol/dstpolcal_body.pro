@@ -244,8 +244,25 @@ if dinfo.xalign then begin
 endif
 
 ; empirical th_offset, 24.3 from Pol.data, 0.4 pol. offset from sunspot-V
-if dinfo.camera eq 'GOLDEYE' then deadtime = 3.32*0.001 else deadtime=0.
-th_offset0 = 0.5*(dinfo.expo - deadtime) *360./dinfo.rotp + 24.3 + 0.4  ; deg.  
+if not keyword_set(orca_IF) then orca_IF = 'CamLink'
+case dinfo.camera of
+	'GOLDEYE': begin
+		deadtime = 3.32*0.001 
+		th_offset0 = 0.5*(dinfo.expo - deadtime) *360./dinfo.rotp + 24.3 + 0.4  ; deg.  
+		end
+	'ORCA4' : begin	; experiment with USB connection
+		obsbin = fits_keyval(h,'BIN',/fix)
+		case obsbin of
+		    1: begin
+			case orca_IF of
+			    'USB':     th_offset0 = (0.5*dinfo.expo - 0.01) *360./dinfo.rotp *4.37 + 23.5 + 0.4	; @ 587nm
+			    'CamLink': th_offset0 = (0.5*dinfo.expo - 0.006) *360./dinfo.rotp *3.438 + 23.5 + 0.4 ; @ 587nm
+			endcase
+			end
+		    2: th_offset0 = (0.5*dinfo.expo - 0.003) *360./dinfo.rotp *2.98 + 23.5 + 0.4	; @ 587nm
+		endcase
+		end
+endcase
 ans = wdyesno('Use default th_offset (='+string(th_offset0,form='(f7.2)')+') ?',x=400,y=300)
 if ans then dinfo.th_offset = th_offset0
 

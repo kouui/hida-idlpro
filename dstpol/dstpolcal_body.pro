@@ -386,7 +386,7 @@ case dinfo.correct_I2quv of
 	end
 endcase
 
-s = correct_QUVconti(s2,ap.yc)
+s = correct_QUVconti(s2,ap.yc-abs(ap.ddy))
 com = com + ' & rm QUVconti.'
 bin = binfact(s)
 if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
@@ -483,7 +483,7 @@ for j=0,nstep-1 do begin
 		end
 	   else: s2 = s1
 	endcase
-	s = correct_QUVconti(s2,ap.yc)
+	s = correct_QUVconti(s2,ap.yc-abs(ap.ddy))
 	com = com + ' & QUVconti.'
 	;sr = correct_Vcrosstk(s3, coeffs=v2qu)
 	if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
@@ -911,7 +911,7 @@ for j=0,n_elements(s0files)-1 do begin
 		end
 	   else: s2 = s1
 	endcase
-	s = correct_QUVconti(s2,ap.yc)
+	s = correct_QUVconti(s2,ap.yc-abs(ap.ddy))
 	com = com + ' & QUVconti.'
 	;sr = correct_Vcrosstk(s3, coeffs=v2qu)
 	if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0

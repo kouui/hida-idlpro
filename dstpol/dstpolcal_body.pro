@@ -220,7 +220,17 @@ j0 = dinfo.nstep*dinfo.i_scan
 file1 = rfiles.files[j0+dinfo.j_pos]
 if _check_polarizer then file1 = rfiles.polarizer[1]
 print,dinfo.j_pos,'  reading ',file1
+
+
 sps = read_dstfits(file1,h,cam=cam,dst=dst,tim=tim)
+;; force dinfo.* comming from data instead of polarizer
+rotp = fits_keyval(h,'ROTP',/float)
+expo = fits_keyval(h,'EXP',/float)
+dinfo.expo = expo
+dinfo.rotp = rotp
+dinfo.bin = fits_keyval(h,'BIN',/fix)
+dinfo.camera = fits_keyval(hp,'CAMERA',/compress)
+dinfo.nrot = expo*nn/rotp*k/4.
 
 sps = rep_missing_pix(sps,miss=miss) 		; replace missing pixels with average i-1 & i+1 frame
 if miss ne 0 then dinfo.com=dinfo.com+'/missing_pix '
@@ -239,7 +249,6 @@ th_offset0 = 0.5*(dinfo.expo - deadtime) *360./dinfo.rotp + 24.3 + 0.4  ; deg.
 ans = wdyesno('Use default th_offset (='+string(th_offset0,form='(f7.2)')+') ?',x=400,y=300)
 if ans then dinfo.th_offset = th_offset0
 
-;debug:
 
 div=''
 t0 = systime(/second)

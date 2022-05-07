@@ -13,6 +13,13 @@
 ;	2022.04.10	k.i.,u.k.  ap.icl, icr set only in align measure
 ;	2022.04.17	k.i.,u.k.  missing pix for count >1
 ;	2022.04.26	k.i.  	print_pcal
+;	2022.04.29	k.i.,u.k.  - sign of U&V in demod. for reverse WP rotation, modu.ampl.& del mal/2, expo.effect
+;	2022.04.30	k.i.,u.k.  if !d.x_size ne xs then window   in dispiquvr
+;	2022.05.02	k.i.,u.k.  th_offset for ORCA, dispiquvr check window, move up rm_badframe
+;	2022.05.06	k.i.,u.k.  mk_drkflt, if nflt eq 0 savedark & return
+;	2022.05.06	u.k.       copy from /home/ichimoto/idlpro/hida/dstpol/dst_pollib.pro; 
+;                             added `@lib_dstpol_para` to the end
+
 @mmdst_lib
 
 ;********************************************************************
@@ -250,6 +257,21 @@ return,ylf
 end
 
 ;********************************************************************
+function rm_badframe,imgs,miss=count	; remove frames with missing pixels
+
+	imgsize,imgs,nx,ny,nn
+	mm = intarr(nn)
+	for i=0,nn-1 do mm[i] = min(imgs[*,*,i])
+	ii = where(mm ne 0, count)
+	miss = nn-count
+	if count lt nn then begin
+		print,nn-count,' frames contain 0'
+		imgs = imgs[*,*,ii]
+	endif
+	return,imgs
+end
+
+;********************************************************************
 pro mk_drkflt, darkfiles,flatfiles,drk,avflt, flatdark=flatdark,savfile=savfile,hd=hd,hf=hf
 ; make dark & flat average  ->  drk[nx,ny],  avflt[nx,ny,nn]
 
@@ -258,6 +280,13 @@ pro mk_drkflt, darkfiles,flatfiles,drk,avflt, flatdark=flatdark,savfile=savfile,
 	drks = rm_badframe(drks)
 	drk = rebin(drks,nx,ny,1)
 	nflt = n_elements(flatfiles)
+	if nflt eq 0 then begin
+		if keyword_set(savfile) then begin
+			save,drk,hd,file=savfile.dark
+			print,'dark saved in ',savfile.dark
+		endif
+		return
+	endif
 	flt1 = read_dstfits(flatfiles[0],hf,cam=cam,dst=dst,tim=tim)
 	imgsize,flt1,nx,ny,nnf
 	avflt = float(flt1)
@@ -469,21 +498,6 @@ function rep_missing_pix,imgs,miss=count
 end
 
 ;********************************************************************
-function rm_badframe,imgs,miss=count	; remove frames with missing pixels
-
-	imgsize,imgs,nx,ny,nn
-	mm = intarr(nn)
-	for i=0,nn-1 do mm[i] = min(imgs[*,*,i])
-	ii = where(mm ne 0, count)
-	miss = nn-count
-	if count lt nn then begin
-		print,nn-count,' frames contain 0'
-		imgs = imgs[*,*,ii]
-	endif
-	return,imgs
-end
-
-;********************************************************************
 pro chk_1st_frame,spsl,spsr,ap,dinfo,xprof=xprof,conti=conti
 ; replace 1st frame by a frame 1rot later if its level is unrelistic
 ; return xprof[nxp,nn]   -  wl-average or continuum (if /conti) intensity along slit & modulation
@@ -560,7 +574,12 @@ endif else begin
 endelse	
 nx2 = nxp/bin &	ny2 = ny/bin
 if not keyword_set(wid) then wid=0
-window,wid,xs=nx2*nsp+dd*(nsp+1),ys=ny2+dd*2,title=title
+xs=nx2*nsp+dd*(nsp+1)
+ys=ny2+dd*2
+device,window_state=wstat
+if (wstat[wid] eq 0) or (!d.x_size ne xs) or (!d.y_size ne ys) then window,wid,xs=xs,ys=ys,title=title $
+else wset,wid
+
 
 intens=congrid(ss[*,*,0],nx2,ny2)
 if keyword_set(isigma) then sgm=isigma else sgm=[-3,1]
@@ -609,10 +628,10 @@ endif else begin
 endelse
 
 s = fltarr(nxp,ny,5)
-for i=0,nn-1 do begin
+for i=0,nn-1 do begin	;  minus sign of U & V for reverse rotation of WP 
 	s[*,*,0] = s[*,*,0] + sps[*,*,i]			; I
 	s[*,*,1] = s[*,*,1] + sps[*,*,i] *cos(4*(th[i]+dth))	; Q
-	s[*,*,2] = s[*,*,2] - sps[*,*,i] *sin(4*(th[i]+dth))	; U
+	s[*,*,2] = s[*,*,2] - sps[*,*,i] *sin(4*(th[i]+dth))	; U  
 	s[*,*,3] = s[*,*,3] - sps[*,*,i] *sin(2*(th[i]+dth))	; V
 	s[*,*,4] = s[*,*,4] + sps[*,*,i] *cos(2*(th[i]+dth))	; R
 endfor
@@ -669,8 +688,10 @@ endcase
 
 print,'combine two spectra..'
 s = sl
-mal = 1-cos(dinfo.del/180*!pi)
-mac = sin(dinfo.del/180*!pi)
+
+dth = dinfo.nrot/nn *2 *!pi
+mal = (1-cos(dinfo.del/180*!pi))/2. *1/(2*dth)*sin(2*dth)
+mac = sin(dinfo.del/180*!pi) *1/dth *sin(dth)
 s[*,*,0] = (sl[*,*,0]+sr[*,*,0])/2
 s[*,*,1:2] = (sl[*,*,1:2]-sr[*,*,1:2])/mal 	; divide mod. ampl. to get Q,U
 s[*,*,3:4] = (sl[*,*,3:4]-sr[*,*,3:4])/mac 	; divide mod. ampl. to get V
@@ -681,7 +702,7 @@ if dinfo.wl_order eq 1 then begin	; swap l and r
 	s[*,*,2] = -s[*,*,2]
 endif
 
-;-- rotate to align -Q in slit direction
+;-- rotate to align +Q in slit direction
 phi2 = 2.*dinfo.rotang/180*!pi
 c2 = cos(phi2) &	s2 = sin(phi2)
 q = s[*,*,1] &		u = s[*,*,2]
@@ -975,7 +996,8 @@ wln=wl/10
 xr=[wln[0],wln[ny2-1]]
 cs=2.2
 title = title0+'  x='+string(ix0,form='(i3)')
-plot,wln,iprof,pos=box+yoff*(0.1+wy1*3),/norm,xtickname=blank,chars=cs,xr=xr,xstyle=1,ystyle=1,title=title;,yr=[0,1.1]
+plot,wln,iprof,pos=box+yoff*(0.1+wy1*3),/norm,xtickname=blank,chars=cs, $
+	xr=xr,xstyle=1,ystyle=1,title=title,yr=[0,max(iprof)*1.1]
 if keyword_set(iref0) then oplot,wln,iref
 xyouts,wln[20],1.,'I',/data,chars=2.5
 plot,wln,qprof,pos=box+yoff*(0.1+wy1*2),/norm,xtickname=blank,/noerase,chars=cs,xr=xr,xstyle=1,yr=yr,ystyle=1
@@ -1058,3 +1080,6 @@ function dinfo_st
 		}
 	return,dinfo
 end
+
+;********************************************************************
+@lib_dstpol_para

@@ -5,10 +5,11 @@
 ;	2022.03.13	k.i.	rep_badframe, chk_1st_frame, xalign_sps, gif save
 ;	2022.03.19	k.i.	dinfo.xalign, com
 ;	2022.04.07	k.i.,u.k.,	cal structure
-;   2022.04.12  u.k.  
+;  2022.04.12   u.k.  
 ;	2022.04.16	k.i.,u.k.,	wdyesno() for save pcal, default th_offset from expo&rotp, rotp fix -> float  
-;   2022.04.25  u.k.    added workdir auto generation if not exist
-;   2022.05.02  u.k.    in demoparam., show demo only stokes
+;  2022.04.25   u.k.    added workdir auto generation if not exist
+;  2022.05.02   u.k.    in demoparam., show demo only stokes
+;  2022.05.02   u.k.    added parallel data processing with IDL bridge and s0 caching
 ;---------------------------------------------------------------------------
 
 ;        ['white'  , 'green'  , 'red'    , 'yellow']
@@ -52,9 +53,10 @@ menu = ['0: average drkflt', $		; average dark & flat, save in workdir
 	'8: plot profs', $		; plot iquv profiles at ipos
 	'9: IQUV map', $		; make IQUV map
 	'10: cancel', $
-	'11: debug', $
-	'12: wl-IQUVmap scan', $      ; make IQUV map with wavelength scan
-	'13: qlmap all folder' $      ; widget selection to view qlmap in all data folders
+	'11: wl-IQUVmap scan', $      ; make IQUV map with wavelength scan
+	'12: qlmap all folder', $      ; widget selection to view qlmap in all data folders
+	'13: obscal para', $     ; parallel data processing with IDL bridge and s0 caching
+	'14: obscal para clear' $ ; clear IDL_BRIDGE objects
 	]
 
 step = smenu(menu,xpos=500,ypos=200,title='DST polcal')
@@ -70,9 +72,10 @@ case step of
 	8: goto,pltprof		; plot iquv profiles at ipos
 	9: goto,iquvmap		; show IQUV map and plot
 	10: stop
-	11: goto,debug
-	12: goto,wliquvmap  ; iquv map with wavelength scan
-	13: goto,qlAll		; widget selection to view qlmap in all data folders
+	11: goto,wliquvmap  ; iquv map with wavelength scan
+	12: goto,qlAll		; widget selection to view qlmap in all data folders
+	13: goto,obscalpara     ; parallel data processing with IDL bridge and s0 cachin
+	14: goto,obscalparaclear ; clear IDL_BRIDGE objects
 endcase
 
 
@@ -454,7 +457,7 @@ for j=0,nstep-1 do begin
 	s1 = correct_DSTpol(s0,dinfo.wl0,dst,sc=sc,mm=mm,pars=pcal.pars)
 	com = com + ' & mmdst [pcal]'
 	case dinfo.correct_I2quv of
-	-1: begin
+		-1: begin
 		s2 = s1
 		for iii=0,2 do s2[*,*,iii+1] -= s2[*,*,0] * my_i2quv[iii]
 		com = com + ' & I2quv [from my_i2quv]'
@@ -637,8 +640,6 @@ for iii=0,nstep-1 do begin
 	sa[*,*,*,i] = s
 endfor
 
-debug:
-
 restore,cal.flat	; fltl & fltr[nxp,ny], avfltl & avfltr[nxp,ny],fltspl & fltspr[nxp,ny]
 imgsize,fltspl,nxp,nyp,n
 iprof = transpose(fltspl[nxp/2,*,0]) 
@@ -761,6 +762,178 @@ stop
 qlAll:
 
 ku_qlmapAll, path.rootdir, cal.ap, wid=7, /wscan, dinfo=dinfo
+
+stop
+
+obscalpara:
+
+;; prepare for parallel processing
+if not keyword_set(_NCORE) then _USER_NCORE=0b else _USER_NCORE=1b
+if not _USER_NCORE then begin
+	com = 'variable _NCORE not defined. use default obscal instead? '
+	ans = wdyesno(com,x=400,y=300)
+	if ans then begin
+		UNDEFINE, _USER_NCORE
+		goto, obscal
+	endif
+	_NCORE=1
+endif
+;if _NCORE gt 3 then _NCORE=3
+print, '>> calibrate obs. data sequence para with _NCORE=',string(_NCORE,form='(i2)'),' <<'
+
+;; restore necessary calibration data
+restore,cal.dark	; drk[nx,ny]
+restore,cal.flat	; fltl[nxp,ny], fltr[nxp,ny]
+restore,cal.ap		; ap
+restore,cal.pcal	; pcal
+imgsize,fltl,nxp,ny,nn
+bin = binfact(fltl)
+
+files = rfiles.files
+nf = n_elements(files)
+if dinfo.nstep eq -1 then nstep = nf else nstep = dinfo.nstep
+
+print,'obscal para: processing '+string(nstep,form='(i3)')+' files'
+
+;; difine output directory for *.s0.sav
+outdir = path.workdir+path.outdir
+if not file_test(outdir) then file_mkdir,outdir
+s0outdir = outdir+'/sav.s0/'
+if not file_test(s0outdir) then file_mkdir,s0outdir
+
+;; select uncached files
+s0files=[] & sel_files=[] & sel_s0savs=[]
+for j=0,nstep-1 do begin
+	file = files[j]
+	fname = FILE_BASENAME(file, '.fits')
+	s0file = s0outdir+fname+'.s0.sav'
+	s0files = [s0files,[s0file]]
+	if FILE_TEST(s0file) then begin
+		print, 'Exist: ', s0file
+		continue
+	endif
+	sel_files = [sel_files,[file]]
+	sel_s0savs = [sel_s0savs, [s0file]]
+endfor
+
+nselect = n_elements(sel_files)
+print, nselect, ' files to be demodulated.'
+
+;;----------------------------------------------------------------------------------------
+;; it is possible to use `br[i]->Status()` to check thread status    |
+;; so that we don't need to create batch file                        |
+;;----------------------------------------------------------------------------------------
+if nselect gt 0 then begin  ;; make batches
+	if _NCORE gt 1 then brs = objarr(_NCORE-1)
+	for i=0,_NCORE-1 do begin
+		fbatch=[] & sbatch=[] 
+		for j=0,nselect-1 do begin
+			if ((j mod _NCORE) ne i) then continue
+			fbatch = [fbatch,[sel_files[j]]]
+			sbatch = [sbatch,[sel_s0savs[j]]]
+		endfor
+		if i eq (_NCORE-1) then begin  ;; current thread
+			dualdemo_cache_files, fbatch, sbatch, drk, fltl, fltr, ap, dinfo, workid=i
+		endif else begin ;; background thread
+			;;if not keyword_set(brs) then throw_error, "objarr of IDL_IDLbridge is not yet created: brs undefined"
+			file_dinfo=s0outdir+'dinfo.'+string(i,form='(i1)')+'.sav'
+			save, dinfo, filename=file_dinfo
+			brs[i]=IDL_IDLbridge()
+			brs[i]->execute,'.r mmdst'
+			brs[i]->execute,'.r dst_pollib'
+			brs[i]->execute,'.r lib_dstpol_para'
+			brs[i]->SetVar,'fbatch',fbatch
+			brs[i]->SetVar,'sbatch',sbatch
+			brs[i]->SetVar,'drk',drk
+			brs[i]->SetVar,'fltl',fltl
+			brs[i]->SetVar,'fltr',fltr
+			brs[i]->SetVar,'file_ap',cal.ap
+			brs[i]->SetVar,'file_dinfo',file_dinfo
+			brs[i]->SetVar,'workid',i
+			brs[i]->execute,'dualdemo_cache_files,fbatch,sbatch,drk,fltl,fltr,ap,dinfo,workid=workid,file_ap=file_ap,file_dinfo=file_dinfo',/nowait
+			print, 'Started IDL_BRIDGE ', i		
+		endelse		
+	endfor
+	if keyword_set(brs) then for i=0,n_elements(brs)-1 do begin
+		WHILE (brs[i]->Status() NE 0) DO WAIT, 0.5
+		OBJ_DESTROY, brs[i]
+		print, 'Destroied IDL_BRIDGE ', i
+	endfor
+endif
+
+;; process s0 -> s
+
+gifdir = outdir+'iquv/'
+if not file_test(gifdir) then file_mkdir,gifdir
+
+for j=0,n_elements(s0files)-1 do begin
+	s0file = s0files[j]
+	file1  = files[j] 
+	
+	restore, s0file  ;; s0,dinfo,h,dst,xprof,dx
+	print, 'restored: ', s0file
+	print, '(',file1,')' 
+	com = 'demo'
+	if dinfo.div eq '' then pmax = pmax0 * max(s0[*,*,0]) else pmax=pmax0
+	dispiquvr,s0,bin=bin,pmax=pmax,/ialog,wid=0,title=com+' only'
+	filename_sep,file1,di,fnam,ex
+	case _IMG_FMT of
+		'png':  WRITE_PNG, gifdir+'s0/s0.'+fnam+'.png', TVRD(/TRUE)
+		'gif':  win2gif,gifdir+'s0/s0.'+fnam+'.gif'
+	endcase
+
+	s1 = correct_DSTpol(s0,dinfo.wl0,dst,sc=sc,mm=mm,pars=pcal.pars)
+	com = com + ' & mmdst [pcal]'
+	case dinfo.correct_I2quv of
+		-1: begin
+		s2 = s1
+		for iii=0,2 do s2[*,*,iii+1] -= s2[*,*,0] * my_i2quv[iii]
+		com = com + ' & I2quv [from my_i2quv]'
+		end
+	   1: begin
+		s2 = correct_Icrosstk(s1, coeffs=pcal.i2quv) 
+		com = com + ' & I2quv [from pcal]'
+		end
+	   2: begin
+		s2 = correct_Icrosstk(s1,/get_coeffs, coeffs=i2quv) 
+		pcal.i2quv = i2quv
+		print,i2quv
+		com = com + ' & I2quv [from data]'
+		end
+	   else: s2 = s1
+	endcase
+	s = correct_QUVconti(s2,ap.yc)
+	com = com + ' & QUVconti.'
+	;sr = correct_Vcrosstk(s3, coeffs=v2qu)
+	if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
+	dispiquvr,s,bin=bin,pmax=pmax,/ialog,wid=3,title=com ;
+	xyouts,10,10,string(j,form='(i3)')+': '+fnam,/dev,chars=3,col=0
+	case _IMG_FMT of
+		'png':  WRITE_PNG, gifdir+'s/s.'+fnam+'.png', TVRD(/TRUE)
+		'gif':  win2gif,gifdir+'s/s.'+fnam+'.gif'
+	endcase
+
+	imgsize,s,nxp,nyp,n5
+	outfile=outdir+'/sav/'+fnam+'.sav'
+	save,s,pcal,dinfo,h,xprof,dx,file=outfile
+	print,'s,pcal,dinfo,h,xprof,dx  saved in ',outfile
+	;win2gif,workdir+outdir+'iquvimg/'+fnam+'.gif'
+endfor
+
+
+
+if not _USER_NCORE then UNDEFINE, _NCORE
+UNDEFINE, _USER_NCORE
+
+stop
+
+obscalparaclear:
+if keyword_set(brs) then for i=0,n_elements(brs)-1 do begin
+	;brs[i]->Abort
+	OBJ_DESTROY, brs[i]
+	print, 'Destroied IDL_BRIDGE ', i
+endfor
+UNDEFINE, brs
 
 stop
 

@@ -16,6 +16,7 @@ _IMG_FMT = 'png'  ; 'png', 'gif'
 _path_pcal_init = ''
 _force_pcal_init = 0b
 _check_polarizer = 0b
+_NCORE = 4
 ;---------------------------------------------------------------------------
 ; 
 

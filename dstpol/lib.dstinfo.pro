@@ -72,3 +72,37 @@ if telpos eq 'WEST' then dst[*,10]=[0,0,1] else dst[*,10]=[0,0,0]
 return,dst
 
 end
+
+;********************************************************************
+function arr2deg,dd
+	rad = (dd[0]+dd[1]/60.+dd[2]/3600.)
+	return,rad
+end
+
+;********************************************************************
+function dst_st,dstarr
+;; date_obs = fits_keyval(h,'DATE_OB2')
+;; dst = dst_st(calc_dstinfo(date_obs,incli))
+
+rad=!pi/180.
+
+ha = (dstarr[0,0]+dstarr[1,0]/60.+dstarr[2,0]/3600.)/24.*2*!pi	; [hh,mm,ss] -> rad
+if ha gt !pi then ha = ha-2*!pi
+
+dst = {dst_st, $
+	zd:	arr2deg(dstarr[*,1])*rad, 	$ ; zenith distance, (rad)
+	ha:     ha, 				$ ; hour angle, (rad)
+	az:     arr2deg(dstarr[*,9])*rad, 	$ ; azimuth, (rad)
+	r: 	dstarr[1,2]+dstarr[2,2]/60., 	$ ; radius,  [min]
+	p: 	arr2deg(dstarr[*,3]), 		$ ; polar angle,  [deg]
+	incli:  arr2deg(dstarr[*,4])*rad,	$ ; inclination, (rad)
+	pos: 	'WEST',				$ ; telescope position, string, 'EAST' or 'WEST'
+	ga:	arr2deg(dstarr[*,5]), 		$ ; grating angle, [deg] 
+	vr:	arr2deg(dstarr[*,7]), 		$ ; vdr encoder,   [deg]
+	hr:	arr2deg(dstarr[*,8]) 		$ ; hdr encoder,  [deg]
+	}
+if dstarr[0,10] eq 0 then dst.pos = 'EAST'
+
+return,dst
+
+end

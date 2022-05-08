@@ -1,9 +1,4 @@
-@mmdst
-@dst_pollib
-@mmdst_lib
-@quv_symfit
-@undefine
-@my_dst_pollib  ; overwrite functions in dst_pollib.pro
+@import.dstpol
 
 path = path_st()
 dinfo = dinfo_st()
@@ -221,7 +216,7 @@ case obs of
 ;;--------------------------------------------
 endcase
 
-@dstpolcal_body
+@main.dstpol
 
 stop
 

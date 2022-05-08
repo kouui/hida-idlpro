@@ -20,7 +20,6 @@
 ;	2022.05.06	u.k.       copy from /home/ichimoto/idlpro/hida/dstpol/dst_pollib.pro; 
 ;                             added `@lib_dstpol_para` to the end
 
-@mmdst_lib
 
 ;********************************************************************
 function arr2deg,dd

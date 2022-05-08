@@ -6,7 +6,7 @@
 ; 2024.04.10  k.u., k.i.,  added EAST pos for 8392 - 10830
 ; 2024.04.10  k.i., k.u.,  change sign of incli in mm_dst
 ;*************************************************************************
-;throw_error (procedure)
+
 ;par_dst (function)
 ;muellermatrix_mirr (function)
 ;muellermatrix_wp (function)
@@ -14,23 +14,6 @@
 ;mm_dst (function)
 ;*************************************************************************
 
-;*************************************************************************
-;+
-; NAME       : throw_error (procedure)
-; PURPOSE    :
-;   throw error with an text discription
-; CALLING SEQUENCE :
-;        throw_error, text
-; INPUTS :
-;        text    - text discription, string
-; MODIFICATION HISTORY :
-;        k.u. '2021/09/20'    
-;*************************************************************************
-
-pro THROW_ERROR, text
-   on_error, 2   ; Stop in caller
-   MESSAGE, LEVEL=-1, textc
-end
 
 ;*************************************************************************
 ;+
@@ -443,4 +426,21 @@ endif
 
 return, mat
 
+END
+
+;------------------------------------------------------------------------
+;; UPDATE mmdst
+FUNCTION UPDATE_MMDST, dst, xn, tn, xc, tc, sc, th_vs=th_vs
+
+;;	zd = (dst[0,1]+dst[1,1]/60.+dst[2,1]/3600.)/180.*!pi
+;;	ha = (dst[0,0]+dst[1,0]/60.+dst[2,0]/3600.)/24.*2*!pi	; [hh,mm,ss] -> rad
+;;	if ha gt !pi then ha = ha-2*!pi
+;;	az = (dst[0,9]+dst[1,9]/60.+dst[2,9]/3600.)/180.*!pi
+;;	incli = (dst[0,4]+dst[1,4]/60.+dst[2,4]/3600.)/180.*!pi
+
+  ;;  mm = mm_dst(zd, ha, az, incli, telpos, xn, tn, xc, tc, sc=sc, qin='slit')
+  	mm = mm_dst(dst.zd, dst.ha, dst.az, dst.incli, dst.pos, xn, tn, xc, tc, sc=sc, qin='slit')
+    if keyword_set(th_vs) then mm = muellermatrix_rot(th_vs*!dtor) ## mm
+
+    return, mm
 END

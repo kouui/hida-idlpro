@@ -5,11 +5,12 @@
 ;	2022.03.13	k.i.	rep_badframe, chk_1st_frame, xalign_sps, gif save
 ;	2022.03.19	k.i.	dinfo.xalign, com
 ;	2022.04.07	k.i.,u.k.,	cal structure
-;  2022.04.12   u.k.  
+;  	2022.04.12   u.k.  
 ;	2022.04.16	k.i.,u.k.,	wdyesno() for save pcal, default th_offset from expo&rotp, rotp fix -> float  
-;  2022.04.25   u.k.    added workdir auto generation if not exist
-;  2022.05.02   u.k.    in demoparam., show demo only stokes
-;  2022.05.02   u.k.    added parallel data processing with IDL bridge and s0 caching
+;  	2022.04.25   u.k.    added workdir auto generation if not exist
+;  	2022.05.02   u.k.    in demoparam., show demo only stokes
+;  	2022.05.02   u.k.    added parallel data processing with IDL bridge and s0 caching
+;	2022.05.08	k.i.,u.k.,	get_th_offset()
 ;---------------------------------------------------------------------------
 
 ;        ['white'  , 'green'  , 'red'    , 'yellow']
@@ -244,25 +245,11 @@ if dinfo.xalign then begin
 endif
 
 ; empirical th_offset, 24.3 from Pol.data, 0.4 pol. offset from sunspot-V
+obsbin = fits_keyval(h,'BIN',/fix)
+orca_IF = fits_keyval(h,'camIF')
 if not keyword_set(orca_IF) then orca_IF = 'CamLink'
-case dinfo.camera of
-	'GOLDEYE': begin
-		deadtime = 3.32*0.001 
-		th_offset0 = 0.5*(dinfo.expo - deadtime) *360./dinfo.rotp + 24.3 + 0.4  ; deg.  
-		end
-	'ORCA4' : begin	; experiment with USB connection
-		obsbin = fits_keyval(h,'BIN',/fix)
-		case obsbin of
-		    1: begin
-			case orca_IF of
-			    'USB':     th_offset0 = (0.5*dinfo.expo - 0.01) *360./dinfo.rotp *4.37 + 23.5 + 0.4	; @ 587nm
-			    'CamLink': th_offset0 = (0.5*dinfo.expo - 0.006) *360./dinfo.rotp *3.438 + 23.5 + 0.4 ; @ 587nm
-			endcase
-			end
-		    2: th_offset0 = (0.5*dinfo.expo - 0.003) *360./dinfo.rotp *2.98 + 23.5 + 0.4	; @ 587nm
-		endcase
-		end
-endcase
+th_offset0 = get_th_offset(dinfo.camera,dinfo.rotp,dinfo.expo,obsbin,cam_IF=orca_IF)
+
 ans = wdyesno('Use default th_offset (='+string(th_offset0,form='(f7.2)')+') ?',x=400,y=300)
 if ans then dinfo.th_offset = th_offset0
 

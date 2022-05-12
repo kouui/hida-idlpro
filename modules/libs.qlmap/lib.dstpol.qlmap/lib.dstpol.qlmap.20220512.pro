@@ -221,8 +221,8 @@ END
 pro qlmap_main
 
 ;rootdir = '/mnt/HDD3TBn52/DST/sp/20220420/spec/He_I_10830/'
-_test = findfile("C:\")
-if n_elements(_test) eq '' then _os='Windows' else _os='Linux'
+_test = findfile("C:\Pro*")
+if keyword_set(_test) then _os='Windows' else _os='Linux'
 print, '[QLMAP] OS : ', _os
 case _os of
     'Windows' : initpath = 'D:\data'

@@ -1,0 +1,1 @@
+imgsize/imgsize.v20220512.pro

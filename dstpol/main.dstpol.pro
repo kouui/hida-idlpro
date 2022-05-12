@@ -397,14 +397,14 @@ if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
 dispiquvr,s,bin=bin,pmax=pmax,wid=2,title=com;,/ialog
 
 
-if dinfo.adj_dstpol then begin
+;if dinfo.adj_dstpol then begin
 ans = wdyesno('Do you like to save pcal in "'+cal.pcal+'" ?',x=400,y=300)
 ;if dinfo.adj_dstpol then begin
 if ans then begin
 	save,pcal,file=cal.pcal
 	print,'pcal saved in ',cal.pcal
 endif
-endif
+;endif
 
 filename_sep,file1,di,fnam,ex
 outdir = path.workdir+path.outdir

@@ -13,28 +13,8 @@
 ;------------------------------------------------------------------------
 ;; color reference : https://www.scollabo.com/banban/lectur/websafe.html
 ;; external dependency
-@mmdst
-@dst_pollib
-@mmdst_lib
-@quv_symfit
-@mmdsttxt
 
-
-;------------------------------------------------------------------------
-;; UPDATE PROFILES
-;; s0 (1, npix_y, 4), 4 : I,Q,U,V
-;FUNCTION update_profiles, s0, mm
-;  
-;   rmm = invert(mm)
-;   ss = size(s0)
-;   ny = ss[2]
-;   s3 = fltarr(1,ny,ss[3])
-;   for j=0,3 do begin
-;		s3[*,*,j] = rmm[0,j]*s0[*,*,0]		
-;             for i=1,3 do s3[*,*,j] = s3[*,*,j] + rmm[i,j]*s0[*,*,i]
-;	endfor
-;   return, s3
-;END
+@import.dstpol.mmdst_adjust
 
 ;------------------------------------------------------------------------
 ;; UPDATE PROFILE PLOTS
@@ -333,7 +313,7 @@ print, "s4d[",conf_symfit.islit1,":",conf_symfit.islit2,",*,*,0]"
                yr = [conf_symfit.iobs1,conf_symfit.iobs2]
                sr = correct_Icrtk(sr,get_coeffs=get_coeffs,yr=yr)
             endif
-            dispiquvr,sr,bin=bin,pmax=0.03,/ialog
+            ku_dispiquvr,sr,bin=bin,pmax=0.03,/ialog
          endfor
          return
       end

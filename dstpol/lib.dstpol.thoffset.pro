@@ -8,7 +8,7 @@ function get_th_offset,camera,rotp,expo,bin,cam_IF=cam_IF
 
 ; empirical th_offset, 24.3 from Pol.data, 0.4 pol. offset from sunspot-V
 if not keyword_set(cam_IF) then cam_IF = 'CamLink'
-case camera of
+case STRUPCASE(camera) of
 	'GOLDEYE': begin
 		deadtime = 3.32*0.001 
 		th_offset0 = 0.5*(expo - deadtime) *360./rotp + 24.3 + 0.4  ; deg.  

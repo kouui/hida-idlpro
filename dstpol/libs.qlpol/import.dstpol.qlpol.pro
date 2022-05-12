@@ -1,4 +1,4 @@
-;; cp `cat dependency.txt` libs/
+
 @throw_error
 @imgsize
 @draw

@@ -1,9 +1,9 @@
-@mmdst
-@mmdst_lib
-@quv_symfit
-@mmdst_adjust
+@lib.dstpol.mmdst
+@lib.dstpol.mmdst_lib
+@lib.dstpol.quv_symfit
+@lib.dstpol.mmdst_adjust
 @lib.dstpol.thoffset
 @lib.dstpol.ichimoto
 @lib.dstpol.parallel
-@lib.dstpol.kouui  ; some modified version functions
+@lib.dstpol.kouui  ; some modified functions
 @lib.dstpol.qlmap

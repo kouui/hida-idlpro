@@ -2,8 +2,8 @@
 ; mmdst_lib
 ;  2022.02.06      u.k.    force qin='slit' in UPDATE_MMDST; added CORRECT_ICRTK
 ;  2022.02.11      u.k.    dst array -> dst struct
-@mmdst
 
+@lib.dstpol.mmdst
 ;------------------------------------------------------------------------
 ;; UPDATE mmdst
 FUNCTION UPDATE_MMDST, dst, xn, tn, xc, tc, sc, th_vs=th_vs

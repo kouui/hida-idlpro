@@ -23,8 +23,7 @@
 
 
 ;; EXTERNAL DEPENDENCY
-@mmdst_lib
-
+@lib.dstpol.mmdst_lib
 ;------------------------------------------------------------------------
 ;; RETURN CURSOR CLICK COORDINATE
 ;; [don't use]

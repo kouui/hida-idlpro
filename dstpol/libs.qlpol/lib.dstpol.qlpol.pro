@@ -32,10 +32,17 @@ end
 
 ;********************************************************************
 function qlpol_stokes, img3d, date_obs, camera, expo, rotp, bin=bin, $ 
-				orca_if=orca_if, show=show, winit=winit, replot=replot
+				orca_if=orca_if, show=show, winit=winit, replot=replot, $
+				qlp_ext=qlp_ext, no_rebin=no_rebin
 	common qlpol_common, qlp, wdqlp, wid
 	common qlpol_data_commom, s0, mm, date_obs0, very_dark, dark, dark_expo
 	
+	if keyword_set(qlp_ext) then begin
+		qlp=qlp_ext
+		print, '[qlpol] qlp changed'
+		help, qlp
+	endif
+
 	is_init=0b
 	if keyword_set(winit) then is_init=1b
 
@@ -63,8 +70,9 @@ function qlpol_stokes, img3d, date_obs, camera, expo, rotp, bin=bin, $
 		mm = UPDATE_MMDST(dst, par.xn, par.tn, par.xc, par.tc, par.sc)
 		im3 = img3d[qlp.box[0]:qlp.box[2],qlp.box[1]:qlp.box[3],*]
 		imgsize, im3, imnx,imny,imnn
-		if (imnx gt 1024) or (imny gt 1024) then $
+		if (not keyword_set(no_rebin)) and ( (imnx gt 1024) or (imny gt 1024) ) then begin
 			im3 = rebin(im3, imnx/2, imny/2, imnn)
+		endif
 
 		very_dark=0b
 		case STRUPCASE(camera) of
@@ -78,7 +86,7 @@ function qlpol_stokes, img3d, date_obs, camera, expo, rotp, bin=bin, $
 
 		;if not is_init is_init then begin ;; no dark subtraction
 		if keyword_set(dark) then begin    ;; if there is dark set 
-			imgsize, im3, imnx,imny,imnn
+			;imgsize, im3, imnx,imny,imnn
 			imgsize, dark, dnx,dny
 			if (imnx ne dnx) or (imny ne dny) then begin
 				print, '[qlpol] conflicted size between data and dark'
@@ -137,6 +145,22 @@ function qlpol_stokes, img3d, date_obs, camera, expo, rotp, bin=bin, $
 	endif
 	return,s3
 end
+;********************************************************************
+pro qlpol_get_qlp, qlp_ext verbose=verbose
+	common qlpol_common, qlp, wdqlp, wid
+
+	if keyword_set(verbose) then help, qlp
+	qlp_ext = qlp
+end
+
+;********************************************************************
+pro qlpol_set_qlp, qlp_ext verbose=verbose
+	common qlpol_common, qlp, wdqlp, wid
+
+	if keyword_set(verbose) then help, qlp
+	qlp = qlp_ext
+end
+
 ;********************************************************************
 pro qlpol_setdark, img3d, expo
 	common qlpol_common, qlp, wdqlp, wid
@@ -387,16 +411,16 @@ pro qlpol_main, img3d, date_obs, camera, expo, rotp
 	box_cur1, x0b, y0b, nxb, nyb,color=color
 	qlp = qlpol_st()
 	qlp.box[0]=x0b & qlp.box[1]=y0b & qlp.box[2]=x0b+nxb & qlp.box[3]=y0b+nyb
-	qlp.box[*] = qlp.box[*]/2 ;; force even number
-	qlp.box[*] = qlp.box[*]*2 
-	qlp.box[*] *= bin
+	qlp.box = qlp.box*bin
+	qlp.box = qlp.box/2 ;; force even number
+	qlp.box = qlp.box*2 
 	print, '[qlpol] selected : (', qlp.box[0], ',',qlp.box[1],'), (',qlp.box[2],',',qlp.box[3],')'
 	print, '[qlpol] select box for I2QUV correction'
 	box_cur1, x0b, y0b, nxb, nyb,color=color
 	qlp.bicrtk[0]=x0b & qlp.bicrtk[1]=y0b & qlp.bicrtk[2]=x0b+nxb & qlp.bicrtk[3]=y0b+nyb
-	qlp.bicrtk[*] = qlp.bicrtk[*]/2 ;; force even number
-	qlp.bicrtk[*] = qlp.bicrtk[*]*2
-	qlp.bicrtk[*] *= bin
+	qlp.bicrtk = qlp.bicrtk*bin
+	qlp.bicrtk = qlp.bicrtk/2 ;; force even number
+	qlp.bicrtk = qlp.bicrtk*2
 	for i=0,1 do $
 	if qlp.bicrtk[i] lt qlp.box[i] then qlp.bicrtk[i]=0 $ 
 	else qlp.bicrtk[i]=qlp.bicrtk[i]-qlp.box[i]

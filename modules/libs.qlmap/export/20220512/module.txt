@@ -1,0 +1,6 @@
+- main
+/home/kouui/idlpro/modules/libs.qlmap/lib.dstpol.qlmap/lib.dstpol.qlmap.20220512.pro
+- import
+import.dstpol.qlmap.pro
+- dependency
+/home/kouui/idlpro/utils/ichimoto/widget/smenu/smenu.20220512.pro

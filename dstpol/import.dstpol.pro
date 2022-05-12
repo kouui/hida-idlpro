@@ -6,4 +6,4 @@
 @lib.dstpol.ichimoto
 @lib.dstpol.parallel
 @lib.dstpol.kouui  ; some modified functions
-@lib.dstpol.qlmap
+@lib.dstpol.qlmapall

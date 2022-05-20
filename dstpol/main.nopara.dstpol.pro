@@ -55,7 +55,8 @@ menu = ['0: average drkflt', $		; average dark & flat, save in workdir
 	'9: IQUV map', $		; make IQUV map
 	'10: cancel', $
 	'11: wl-IQUVmap scan', $      ; make IQUV map with wavelength scan
-	'12: qlmap all folder' $      ; widget selection to view qlmap in all data folders
+	'12: qlmap all folder', $      ; widget selection to view qlmap in all data folders
+	'13: obscal para' $     ; parallel data processing with IDL bridge and s0 caching
 	]
 
 step = smenu(menu,xpos=500,ypos=200,title='DST polcal')
@@ -73,6 +74,7 @@ case step of
 	10: stop
 	11: goto,wliquvmap  ; iquv map with wavelength scan
 	12: goto,qlAll		; widget selection to view qlmap in all data folders
+	13: goto,obscalpara     ; parallel data processing with IDL bridge and s0 cachin
 endcase
 
 
@@ -773,4 +775,137 @@ qlAll:
 ku_qlmapAll, path.rootdir, cal.ap, wid=7, /wscan, dinfo=dinfo
 
 stop
+
+
+;;----------------------------------------------------------------------------------------
+;; parallel processing all data files in the folder
+obscalpara:
+
+
+print, '>> calibrate obs. data sequence sequential  <<'
+
+;; restore necessary calibration data
+restore,cal.dark	; drk[nx,ny]
+restore,cal.flat	; fltl[nxp,ny], fltr[nxp,ny]
+restore,cal.ap		; ap
+restore,cal.pcal	; pcal
+imgsize,fltl,nxp,ny,nn
+bin = binfact(fltl)
+
+files = rfiles.files
+nf = n_elements(files)
+if dinfo.nstep eq -1 then nstep = nf else nstep = dinfo.nstep
+
+print,'obscal para: processing '+string(nstep,form='(i3)')+' files'
+
+;; difine output directory for *.s0.sav
+outdir = path.workdir+path.outdir
+if not file_test(outdir) then file_mkdir,outdir
+s0outdir = outdir+'/sav.s0/'
+if not file_test(s0outdir) then file_mkdir,s0outdir
+
+;; select uncached files
+s0files=[''] & sel_files=[''] & sel_s0savs=['']
+for j=0,nstep-1 do begin
+	if dinfo.nstep eq -1 then file = files[j] else file = files[dinfo.i_scan*dinfo.nstep+j]
+	fname = FILE_BASENAME(file, '.fits')
+	s0file = s0outdir+fname+'.s0.sav'
+	s0files = [s0files,[s0file]]
+	if FILE_TEST(s0file) then begin
+		print, 'Exist: ', s0file
+		continue
+	endif
+	sel_files = [sel_files,[file]]
+	sel_s0savs = [sel_s0savs, [s0file]]
+endfor
+
+nselect = n_elements(sel_files) -1 ;; first element is ''
+print, nselect, ' files to be demodulated.'
+
+;;----------------------------------------------------------------------------------------
+;; it is possible to use `br[i]->Status()` to check thread status    |
+;; so that we don't need to create batch file                        |
+;;----------------------------------------------------------------------------------------
+;;----------------------------------------------------------------------------------------
+;; in case of we have file to be demodulated
+if nselect gt 0 then begin	
+
+	fbatch = remove_first(sel_files)
+	sbatch = remove_first(sel_s0savs)
+
+	nf1=n_elements(fbatch)
+	for k=0, n_elements(fbatch)-1 do begin
+		file = fbatch[k] & outfile = sbatch[k]
+		print, string(k+1,form='(i3)')+'/'+string(nf1,form='(i3)')+'  processing : ', file
+		dualdemo_cache, file, outfile, drk, fltl, fltr, ap, dinfo, ' ', s0=s0
+		if dinfo.div eq '' then pmax = pmax0 * max(s0[*,*,0]) else pmax=pmax0
+		dispiquvr,s0,bin=bin,pmax=pmax,/ialog,wid=0,title='demo only'
+	endfor
+
+endif
+
+
+gifdir = outdir+'iquv/'
+if not file_test(gifdir) then file_mkdir,gifdir
+;;----------------------------------------------------------------------------------------
+;; process s0 -> s
+;; first element is ''
+for j=1,n_elements(s0files)-1 do begin
+	s0file = s0files[j]
+	file1  = files[j] 
+	
+	restore, s0file  ;; s0,dinfo,h,dst,xprof,dx
+	print, 'restored: ', s0file
+	print, '(',file1,')' 
+	com = 'demo'
+	if dinfo.div eq '' then pmax = pmax0 * max(s0[*,*,0]) else pmax=pmax0
+	dispiquvr,s0,bin=bin,pmax=pmax,/ialog,wid=0,title=com+' only'
+	filename_sep,file1,di,fnam,ex
+	case _IMG_FMT of
+		'png':  WRITE_PNG, gifdir+'s0/s0.'+fnam+'.png', TVRD(/TRUE)
+		'gif':  win2gif,gifdir+'s0/s0.'+fnam+'.gif'
+	endcase
+
+	s1 = correct_DSTpol(s0,dinfo.wl0,dst,sc=sc,mm=mm,pars=pcal.pars)
+	com = com + ' & mmdst [pcal]'
+	case dinfo.correct_I2quv of
+		-1: begin
+		s2 = s1
+		for iii=0,2 do s2[*,*,iii+1] -= s2[*,*,0] * my_i2quv[iii]
+		com = com + ' & I2quv [from my_i2quv]'
+		end
+	   1: begin
+		s2 = correct_Icrosstk(s1, coeffs=pcal.i2quv) 
+		com = com + ' & I2quv [from pcal]'
+		end
+	   2: begin
+		s2 = correct_Icrosstk(s1,/get_coeffs, coeffs=i2quv) 
+		pcal.i2quv = i2quv
+		print,i2quv
+		com = com + ' & I2quv [from data]'
+		end
+	   else: s2 = s1
+	endcase
+	s = correct_QUVconti(s2,ap.yc-abs(ap.ddy))
+	com = com + ' & QUVconti.'
+	;sr = correct_Vcrosstk(s3, coeffs=v2qu)
+	if dinfo.div eq '' then pmax = pmax0 * max(s[*,*,0]) else pmax=pmax0
+	dispiquvr,s,bin=bin,pmax=pmax,/ialog,wid=3,title=com ;
+	xyouts,10,10,string(j,form='(i3)')+': '+fnam,/dev,chars=3,col=0
+	case _IMG_FMT of
+		'png':  WRITE_PNG, gifdir+'s/s.'+fnam+'.png', TVRD(/TRUE)
+		'gif':  win2gif,gifdir+'s/s.'+fnam+'.gif'
+	endcase
+
+	imgsize,s,nxp,nyp,n5
+	outfile=outdir+'/sav/'+fnam+'.sav'
+	save,s,pcal,dinfo,h,xprof,dx,file=outfile
+	print,'s,pcal,dinfo,h,xprof,dx  saved in ',outfile
+	;win2gif,workdir+outdir+'iquvimg/'+fnam+'.gif'
+endfor
+
+stop
+
+;;----------------------------------------------------------------------------------------
+
 

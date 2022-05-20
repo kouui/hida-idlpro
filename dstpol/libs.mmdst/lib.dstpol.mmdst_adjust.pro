@@ -58,7 +58,7 @@ PRO update_profile_plots, wl, profs, wid, init=init, s0=s0, s2=s2
           yr = yabsmax*[-1,1]
           ;;ytext = yr[1]*0.6
           plot,wl,prof,pos=box+yoff*(0.1+wy1*(3-i)),/norm,xtickname=xtickname, chars=cs,xstyle=1,yr=yr,ystyle=1,/noerase
-          oplot,[wl[0],wl[-1]],[0,0],linestyle=1
+          oplot,[wl[0],wl[n_elements(wl)-1]],[0,0],linestyle=1
       endelse
       if keyword_set(s0) then oplot, wl, s0[0,*,i], color=color_fix, linestyle=2
       if keyword_set(s2) and (not keyword_set(init)) then oplot, wl, s2[0,*,i], color=color_fix

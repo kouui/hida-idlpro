@@ -92,12 +92,14 @@ FUNCTION CALCULATE_FIT_RANGE, xl_edge, xl_center, xc_edge, xc_center, sp, xdata=
     nx = fix( abs(xc_center-xc_edge) )
     xc3 = [xc_center-nx, xc_center, xc_center+nx]
 
-    xls = indgen(npoints, start=xl3[0], /float)
+    ;xls = indgen(npoints, start=xl3[0], /float)
+    xls = findgen(npoints) + xl3[0]
     ;; shrink the interval in continuum grid
     ;; to match 
     ;; - the given range
     ;; - npoint in line grid
-    xcs = indgen(npoints, start=xc3[0], /float, increment=float(nx)/float(nxl))
+    ;xcs = indgen(npoints, start=xc3[0], /float, increment=float(nx)/float(nxl))
+    xcs = findgen(npoints)*float(nx)/float(nxl) + xc3[0]
 
     return, npoints
 END

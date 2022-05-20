@@ -17,7 +17,7 @@
 FUNCTION ku_generate_menu, rootdir
 
 folders0 = file_search(rootdir+'/*', /TEST_DIRECTORY)
-folders = []
+folders = ['']
 for i=0, n_elements(folders0)-1 do begin
 	fdname = file_basename(folders0[i])
 	;; skip folder of calibration data
@@ -26,7 +26,7 @@ for i=0, n_elements(folders0)-1 do begin
 endfor
 print, "found data folders ", folders
 
-menu = ['quit',folders]
+menu = ['quit',folders[1:n_elements(folders)-1]]
 
 return, menu
 

@@ -227,7 +227,7 @@ END
 ; create parinfo for 5 parameters in mpfit
 FUNCTION MAKE_PARINFO, xn, tn, xc, tc, sc, th_vs, conf_symfit
     npar = 6
-    parinfo = [] & for i=0,npar-1 do parinfo = [parinfo,init_parinfo()]
+    parinfo = [init_parinfo()] & for i=1,npar-1 do parinfo = [parinfo,init_parinfo()]
     ;; xn
     i=0
     parinfo[i].value = xn

@@ -60,7 +60,8 @@ FUNCTION MMDST_ADJUST_TXT_READ, file
 if keyword_set(file) then begin
     OPENR, lun, file, /GET_LUN
     ; Read one line at a time, saving the result into array
-    data = []
+    ;data = []
+    data = [ {mmdst_adjust_text_item, key:'',type:'',text:''} ]
     line = ''
     WHILE NOT EOF(lun) DO BEGIN
         READF, lun, line
@@ -70,11 +71,12 @@ if keyword_set(file) then begin
         words = STRSPLIT(line,',',/EXTRACT)
         nw = n_elements(words)
         if not nw eq 3 then throw_error, "n_element of line not eq 3: ", line
-        words1 = []
-        for i=0,nw-1 do words1 = [words1,STRTRIM(words[i], 2)]
+        words1 = [STRTRIM(words[0], 2)]
+        for i=1,nw-1 do words1 = [words1,STRTRIM(words[i], 2)]
         ;data = [[data], [words1]]
         data = [data, {mmdst_adjust_text_item, key:words1[0],type:words1[1],text:words1[2]}]
     ENDWHILE
+    data = data[1:n_elements(data)-1]
     ;print, data
     ; Close the file and free the file unit
     FREE_LUN, lun

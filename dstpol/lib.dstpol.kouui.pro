@@ -95,3 +95,13 @@ pro ku_mk_drkflt, darkfiles,flatfiles,drk,avflt, flatdark=flatdark,savfile=savfi
 
 end
 
+;********************************************************************
+function remove_first, arr
+
+	n = n_elements(arr)
+	if n eq 1 then return, arr
+	
+	return, arr[1:n-1]
+
+end
+

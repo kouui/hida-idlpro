@@ -112,7 +112,7 @@ FUNCTION select_ypos_profile, s2d, wid=wid, ialog=ialog, msg_arr=msg_arr
 
    for i=0,3 do xyouts,100+50*i,100,labels[i],chars=2.5, color=colors[i], /device
 
-   xpos_arr = []
+   xpos_arr = [0]
    for kk=0,nclick-1 do begin
       ;; click and compute x position
       pos = click_event(msg=msg_arr[kk], /data)
@@ -123,6 +123,7 @@ FUNCTION select_ypos_profile, s2d, wid=wid, ialog=ialog, msg_arr=msg_arr
       xpos_arr = [xpos_arr,[xpos]]
       oplot,[xpos], [s2d[xpos,0]*mx], color=colors[0], psym=5, thick=4
    endfor
+   xpos_arr=xpos_arr[1:n_elements(xpos_arr)-1]
 
 
 
@@ -173,7 +174,7 @@ FUNCTION select_xpos, s4, pmax=pmax, bin=bin, wid=wid, ialog=ialog, islabel=isla
       x0s[j] = x0
    endfor
 
-   xpos_arr = []
+   xpos_arr = [0]
    for kk=0,nclick-1 do begin
       ;; click and compute x position
       pos = click_event(msg=msg_arr[kk])
@@ -196,6 +197,7 @@ FUNCTION select_xpos, s4, pmax=pmax, bin=bin, wid=wid, ialog=ialog, islabel=isla
       
       xpos_arr = [xpos_arr,[xpos]]
    endfor
+   xpos_arr=xpos_arr[1:n_elements(xpos_arr)-1]
 
    if nclick eq 1 then return, xpos_arr[0]
    return, xpos_arr
@@ -534,8 +536,9 @@ s3d = sdata.s4d[*,*,*,0]
 ;; select islit1, islit2
 if keyword_set(sconf) then conf.sconf = sconf
 names = ['left bound of sunspot', 'right bound of sunspot']
-msg_arr = []
+msg_arr = ['']
 for i=0,n_elements(names)-1 do msg_arr = [msg_arr,['click left button to select '+names[i]+' ...']]
+msg_arr = msg_arr[1:n_elements(msg_arr)-1]
 
 if (conf.sconf.islit1 eq -1) or (conf.sconf.islit2 eq -1) then begin
    xpos2 = select_xpos(s3d, pmax=0.01, wid=20, bin=bin, /islabel, msg_arr=msg_arr)
@@ -554,8 +557,10 @@ wdelete, 21
 ;; select iedgeL, icentL, iedgeC, icentC
 names = ['edge of a polarmetric obsorption line', 'center of a polarmetric obsorption line']
 names = [names, ['edge of continuum','center of continuum']]
-msg_arr = []
+msg_arr = ['']
 for i=0,n_elements(names)-1 do msg_arr = [msg_arr,['click left button to select '+names[i]+' ...']]
+msg_arr = msg_arr[1:n_elements(msg_arr)-1]
+
 xpos4 = select_ypos_profile(reform(s2d), wid=22, msg_arr=msg_arr)
 conf.sconf.iedgeL = xpos4[0]
 conf.sconf.icentL = xpos4[1]

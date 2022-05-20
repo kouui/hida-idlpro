@@ -78,8 +78,14 @@ while 1b do begin
     ffind = rootdir + '/' + folder + '/*.fits'
     files = findfile(ffind)
     nf = n_elements(files)
+    if not keyword_set(files) then nf=1
     print, '[QLMAP] ', strtrim(nf,1), " .fits files found in folder : ", folder
 
+    if nf eq 0 then begin
+        menu = __generate_menu(rootdir)
+        continue 
+    endif
+    
     sp1 = readfits(files[0],h,nslice=0)
     _ss = size(sp1) & nx=_ss[1] & ny=_ss[2]
 
@@ -206,7 +212,8 @@ while 1b do begin
             sp1 = readfits(files[j0+j],h,nslice=1)
             limg[*,j] = sp1[ap.ix1:ap.ix2,py]
         endfor
-        tvf,reverse(congrid(limg,200,200),2)
+        tvscl,reverse(congrid(limg,200,200),2)
+        ;tvf,reverse(congrid(limg,200,200),2)
         ;tvf,congrid(limg,200,200)
         wshow
     endelse

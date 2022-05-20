@@ -845,6 +845,8 @@ if nselect gt 0 then begin
 endif
 
 
+if (keyword_set(_MAKE_S0_ONLY) and _MAKE_S0_ONLY) then dumy=1 else begin 
+
 gifdir = outdir+'iquv/'
 if not file_test(gifdir) then file_mkdir,gifdir
 ;;----------------------------------------------------------------------------------------
@@ -904,6 +906,7 @@ for j=1,n_elements(s0files)-1 do begin
 	;win2gif,workdir+outdir+'iquvimg/'+fnam+'.gif'
 endfor
 
+endelse
 stop
 
 ;;----------------------------------------------------------------------------------------

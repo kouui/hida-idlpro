@@ -19,6 +19,7 @@
 ;	2022.05.06	k.i.,u.k.  mk_drkflt, if nflt eq 0 savedark & return
 ;	2022.05.06	u.k.       copy from /home/ichimoto/idlpro/hida/dstpol/dst_pollib.pro; 
 ;                             added `@lib_dstpol_para` to the end
+;   2022.05.22  u.k.    dinfo_st and correct_Icrosstk added xrange,yrange; 
 
 
 ;********************************************************************
@@ -721,16 +722,17 @@ return,s
 end
 
 ;********************************************************************
-function correct_Icrosstk,s,get_coeffs=get_coeffs,coeffs=coeffs,yrange=yr,correct=correct
+function correct_Icrosstk,s,get_coeffs=get_coeffs,coeffs=coeffs,xrange=xr,yrange=yr,correct=correct
 ;-- I -> Q,U,V & bias correction, if needed, do after DST Mueller matrix is applied --
 ;  s[*,*,5]
 ;  coeffs[2,4]    P' = P -c0*I - c1
 imgsize,s,nx,ny,nn
-if not keyword_set(yr) then yr=[0,ny-1]
+if (not keyword_set(yr)) or (yr[0]+yr[1] eq 0) then yr=[0,ny-1]
+if (not keyword_set(xr)) or (xr[0]+xr[1] eq 0) then xr=[0,nx-1]
 
 if keyword_set(get_coeffs) or not keyword_set(coeffs) then begin
 	coeffs = fltarr(2,nn-1)
-	for i=0,nn-2 do coeffs[*, i]= poly_fit(s[*,yr[0]:yr[1],0],s[*,yr[0]:yr[1],i+1],1)
+	for i=0,nn-2 do coeffs[*, i]= poly_fit(s[xr[0]:xr[1],yr[0]:yr[1],0],s[xr[0]:xr[1],yr[0]:yr[1],i+1],1)
 endif
 
 s2 = s
@@ -1074,7 +1076,9 @@ function dinfo_st
 		div:	'c',		$ ; divide QUV by continuum 'c',  intensity 'i', and non ''
 		xalign:	1,		$ ; if 1, align in slit direction for demodulation
 		adj_dstpol: 1,		$ ; if 1, adjust DST pol.parms using Zeemen in sunspot 
-		correct_I2quv: 1,	$ ; 0 - no correction, 1 - use i2quv[2,3],  2 - correct with own IQUV 
+		correct_I2quv: 1,	$ ; 0 - no correction, 1 - use i2quv[2,3],  2 - correct with own IQUV
+		I2quv_xrange: [0,0],    $ ; x-range for correct_I2quv
+        I2quv_yrange: [0,0],    $ ; y-range for correct_I2quv
 		com:	''		$ ; comments
 		}
 	return,dinfo

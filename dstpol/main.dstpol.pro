@@ -11,6 +11,7 @@
 ;  	2022.05.02  u.k.    in demoparam., show demo only stokes
 ;  	2022.05.02  u.k.    added parallel data processing with IDL bridge and s0 caching
 ;	2022.05.08	k.i.,u.k.,	get_th_offset()
+;	2022.05.08	k.i.,u.k.,	correct_Icrosstk with region selection
 ;---------------------------------------------------------------------------
 
 ;        ['white'  , 'green'  , 'red'    , 'yellow']
@@ -23,6 +24,12 @@ if not file_test(path.workdir+path.outdir) then  file_copy, path.workdir+'setdir
 ;---------------------------------------------------------------------------
 dir0 = path.rootdir+path.caldatdir
 undefine,rfiles
+
+;; overwrite (perhaps old version) dinfo with new version dinfo
+dinfo0 = dinfo
+dinfo = dinfo_st()
+struct_assign, dinfo0, dinfo
+
 rfiles = create_struct( $
 	'dark', findfile(dir0+path.darkfile), $			; dark
 	'flat', findfile(dir0+path.flatfile), $			; flat
@@ -380,9 +387,15 @@ case dinfo.correct_I2quv of
 	com = com + ' & I2quv [from pcal]'
 	end
    2: begin
-	s2 = correct_Icrosstk(s1,/get_coeffs, coeffs=i2quv) 
+	get_box=1
+	dispiquvr,s1,bin=bin,pmax=pmax,wid=0,title='select i2quv region',get_box=get_box
+	xrange=get_box[0]+[0,get_box[2]-1]
+	yrange=get_box[1]+[0,get_box[3]-1]
+	s2 = correct_Icrosstk(s1,/get_coeffs, coeffs=i2quv, xrange=xrange, yrange=yrange)
 	pcal.i2quv = i2quv
 	print,i2quv
+	dinfo.i2quv_xrange=xrange
+    dinfo.i2quv_yrange=yrange
 	com = com + ' & I2quv [from data]'
 	end
    else: begin
@@ -411,6 +424,11 @@ outdir = path.workdir+path.outdir
 if not file_test(outdir) then file_mkdir,outdir
 save,s,file=outdir+fnam+'.sav'
 print,'result s[*,*,4] saved in ',outdir
+
+;; save dinfo (selected xrange, yrange)
+save,dinfo,file = cal.dinfo
+print,'dinfo saved in ',cal.dinfo
+
 
 stop
 
@@ -480,7 +498,7 @@ for j=0,nstep-1 do begin
 		com = com + ' & I2quv [from pcal]'
 		end
 	   2: begin
-		s2 = correct_Icrosstk(s1,/get_coeffs, coeffs=i2quv) 
+		s2 = correct_Icrosstk(s1,/get_coeffs, coeffs=i2quv, xrange=dinfo.i2quv_xrange, yrange=dinfo.i2quv_yrange) 
 		pcal.i2quv = i2quv
 		print,i2quv
 		com = com + ' & I2quv [from data]'
@@ -944,7 +962,7 @@ for j=0,n_elements(s0files)-1 do begin
 		com = com + ' & I2quv [from pcal]'
 		end
 	   2: begin
-		s2 = correct_Icrosstk(s1,/get_coeffs, coeffs=i2quv) 
+		s2 = correct_Icrosstk(s1,/get_coeffs, coeffs=i2quv, xrange=dinfo.i2quv_xrange, yrange=dinfo.i2quv_yrange) 
 		pcal.i2quv = i2quv
 		print,i2quv
 		com = com + ' & I2quv [from data]'

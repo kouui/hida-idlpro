@@ -2,6 +2,7 @@
 ;; 2022.05.06  k.u.  for demodulation and s0 caching with IDL_BRIDGE
 ;; 2022.05.20  k.u.  calculated dst -> raw dst,
 ;;                   dinfo -> dinfo_s0, to be saved in *.sav file,
+;;                   do not save dinfo in *.s0.sav
 
 ;@mmdst
 ;@dst_pollib
@@ -31,8 +32,9 @@ PRO dualdemo_cache, file, outfile, drk, fltl, fltr, ap, dinfo, worktitle, s0=s0
 		sxprof=size(xprof)
 		dx=fltarr(sxprof[2])
 	endif
-	dinfo_s0 = dinfo
-	save, s0,dinfo_s0,h,dst,xprof,dx,file=outfile
+	; dinfo_s0 = dinfo
+	; save, s0,dinfo_s0,h,dst,xprof,dx,file=outfile
+	save, s0,h,dst,xprof,dx,file=outfile
 	print, worktitle, 'saved as: ', outfile
 
 END

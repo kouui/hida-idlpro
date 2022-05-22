@@ -5,11 +5,11 @@
 ;	2022.03.13	k.i.	rep_badframe, chk_1st_frame, xalign_sps, gif save
 ;	2022.03.19	k.i.	dinfo.xalign, com
 ;	2022.04.07	k.i.,u.k.,	cal structure
-;  	2022.04.12   u.k.  
+;  	2022.04.12  u.k.  
 ;	2022.04.16	k.i.,u.k.,	wdyesno() for save pcal, default th_offset from expo&rotp, rotp fix -> float  
-;  	2022.04.25   u.k.    added workdir auto generation if not exist
-;  	2022.05.02   u.k.    in demoparam., show demo only stokes
-;  	2022.05.02   u.k.    added parallel data processing with IDL bridge and s0 caching
+;  	2022.04.25  u.k.    added workdir auto generation if not exist
+;  	2022.05.02  u.k.    in demoparam., show demo only stokes
+;  	2022.05.02  u.k.    added parallel data processing with IDL bridge and s0 caching
 ;	2022.05.08	k.i.,u.k.,	get_th_offset()
 ;---------------------------------------------------------------------------
 
@@ -856,7 +856,7 @@ for j=1,n_elements(s0files)-1 do begin
 	s0file = s0files[j]
 	file1  = files[j] 
 	
-	restore, s0file  ;; s0,dinfo,h,dst,xprof,dx
+	restore, s0file  ;; s0,dinfo_s0,h,dst,xprof,dx
 	print, 'restored: ', s0file
 	print, '(',file1,')' 
 	com = 'demo'
@@ -867,6 +867,14 @@ for j=1,n_elements(s0files)-1 do begin
 		'png':  WRITE_PNG, gifdir+'s0/s0.'+fnam+'.png', TVRD(/TRUE)
 		'gif':  win2gif,gifdir+'s0/s0.'+fnam+'.gif'
 	endcase
+
+	if (dst.zd eq 0. and dst.ha eq 0.) or (dst.zd gt 100.) then begin
+		date_obs = fits_keyval(h,'DATE_OB2')
+		dst = dst_st(calc_dstinfo(date_obs,dinfo.incli))
+		dst.pos = dinfo.telpos
+		print, 'DSTinfo calculated from DATE_OB2,  ZD=', string(dst.zd,form='(f6.4)'), $
+			'  HA=',string(dst.ha,form='(f6.4)'),'  Azim=',string(dst.az,form='(f6.4)')
+	endif
 
 	s1 = correct_DSTpol(s0,dinfo.wl0,dst,sc=sc,mm=mm,pars=pcal.pars)
 	com = com + ' & mmdst [pcal]'

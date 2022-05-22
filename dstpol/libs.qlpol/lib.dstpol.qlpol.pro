@@ -1,5 +1,6 @@
 ;; history
 ;; 2022.05.05  k.u.
+;; 2022.05.22  k.u.  debug, odd size in area selection
 
 @import.dstpol.qlpol
 
@@ -68,7 +69,7 @@ function qlpol_stokes, img3d, date_obs, camera, expo, rotp, bin=bin, $
 		dst.pos = qlp.telpos
 		par=qlp.par
 		mm = UPDATE_MMDST(dst, par.xn, par.tn, par.xc, par.tc, par.sc)
-		im3 = img3d[qlp.box[0]:qlp.box[2],qlp.box[1]:qlp.box[3],*]
+		im3 = img3d[qlp.box[0]:qlp.box[2]-1,qlp.box[1]:qlp.box[3]-1,*]
 		imgsize, im3, imnx,imny,imnn
 		if (not keyword_set(no_rebin)) and ( (imnx gt 1024) or (imny gt 1024) ) then begin
 			im3 = rebin(im3, imnx/2, imny/2, imnn)

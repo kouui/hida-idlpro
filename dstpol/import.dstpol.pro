@@ -5,5 +5,6 @@
 @lib.dstpol.thoffset
 @lib.dstpol.ichimoto
 @lib.dstpol.parallel
+@lib.dstpol.wliquvmap
 @lib.dstpol.kouui  ; some modified functions
 @lib.dstpol.qlmapall

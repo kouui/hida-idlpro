@@ -651,8 +651,8 @@ stop
 
 wliquvmap:
 ;***************  show iquvmap with wavelength scan *****************
-wliquvmap, path, dinfo, cal, prof_step=dinfo.j_pos, /selectwl, pmax0=pmax0, bin=bin
-
+;wliquvmap, path, dinfo, cal, prof_step=dinfo.j_pos, /selectwl, pmax0=pmax0, bin=bin
+wliquvmap, path, dinfo, cal, prof_step=dinfo.j_pos, pmax0=pmax0, bin=bin,ysiz=_ysiz;,/ictour
 stop
 
 slitiquvmap:
@@ -746,7 +746,6 @@ print, '>> calibrate obs. data sequence para with _NCORE=',string(_NCORE,form='(
 restore,cal.dark	; drk[nx,ny]
 restore,cal.flat	; fltl[nxp,ny], fltr[nxp,ny]
 restore,cal.ap		; ap
-restore,cal.pcal	; pcal
 imgsize,fltl,nxp,ny,nn
 bin = binfact(fltl)
 
@@ -848,6 +847,10 @@ if nselect gt 0 then begin
 ;;----------------------------------------------------------------------------------------
 endif
 
+ans = wdyesno('Continue to perform Mueller Matrix correction?',x=400,y=300)
+if not ans then stop
+
+restore,cal.pcal	; pcal
 
 gifdir = outdir+'iquv/'
 if not file_test(gifdir) then file_mkdir,gifdir

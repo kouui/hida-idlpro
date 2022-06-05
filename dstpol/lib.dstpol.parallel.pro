@@ -34,7 +34,7 @@ PRO dualdemo_cache, file, outfile, drk, fltl, fltr, ap, dinfo, worktitle, s0=s0
 	endif
 	; dinfo_s0 = dinfo
 	; save, s0,dinfo_s0,h,dst,xprof,dx,file=outfile
-	save, s0,h,dst,xprof,dx,file=outfile
+	save, s0,h,dst,xprof,dx,file=outfile,/verbose
 	print, worktitle, 'saved as: ', outfile
 
 END

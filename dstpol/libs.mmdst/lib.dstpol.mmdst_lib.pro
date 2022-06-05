@@ -6,7 +6,7 @@
 @lib.dstpol.mmdst
 ;------------------------------------------------------------------------
 ;; UPDATE mmdst
-FUNCTION UPDATE_MMDST, dst, xn, tn, xc, tc, sc, th_vs=th_vs
+FUNCTION UPDATE_MMDST, dst, xn, tn, xc, tc, sc, th_vs=th_vs, ao=ao
 
 ;;	zd = (dst[0,1]+dst[1,1]/60.+dst[2,1]/3600.)/180.*!pi
 ;;	ha = (dst[0,0]+dst[1,0]/60.+dst[2,0]/3600.)/24.*2*!pi	; [hh,mm,ss] -> rad
@@ -14,10 +14,10 @@ FUNCTION UPDATE_MMDST, dst, xn, tn, xc, tc, sc, th_vs=th_vs
 ;;	az = (dst[0,9]+dst[1,9]/60.+dst[2,9]/3600.)/180.*!pi
 ;;	incli = (dst[0,4]+dst[1,4]/60.+dst[2,4]/3600.)/180.*!pi
 
-  ;;  mm = mm_dst(zd, ha, az, incli, telpos, xn, tn, xc, tc, sc=sc, qin='slit')
-  	mm = mm_dst(dst.zd, dst.ha, dst.az, dst.incli, dst.pos, xn, tn, xc, tc, sc=sc, qin='slit')
-    if keyword_set(th_vs) then mm = muellermatrix_rot(th_vs*!dtor) ## mm
-
+   ;;  mm = mm_dst(zd, ha, az, incli, telpos, xn, tn, xc, tc, sc=sc, qin='slit')
+  	mm = mm_dst(dst.zd, dst.ha, dst.az, dst.incli, dst.pos, xn, tn, xc, tc, sc=sc, qin='slit',ao=ao)
+   if keyword_set(th_vs) then mm = muellermatrix_rot(th_vs*!dtor) ## mm
+     
     return, mm
 END
 

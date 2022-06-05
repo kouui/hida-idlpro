@@ -553,7 +553,7 @@ end
 
 ;********************************************************************
 pro dispiquvr,i,q,u,v,r,bin=bin,pmax=pmax,coms=coms,ialog=ialog,wid=wid,ipos=ipos,dd=dd, $
-	isigma=isigma,title=title
+	isigma=isigma,title=title,get_ipos=ix1,get_box=get_box
 
 if not keyword_set(bin) then bin=2
 if not keyword_set(pmax) then pmax=0.01
@@ -577,9 +577,9 @@ if not keyword_set(wid) then wid=0
 xs=nx2*nsp+dd*(nsp+1)
 ys=ny2+dd*2
 device,window_state=wstat
+if (wstat[wid] eq 1) then wset,wid
 if (wstat[wid] eq 0) or (!d.x_size ne xs) or (!d.y_size ne ys) then window,wid,xs=xs,ys=ys,title=title $
 else wset,wid
-
 
 intens=congrid(ss[*,*,0],nx2,ny2)
 if keyword_set(isigma) then sgm=isigma else sgm=[-3,1]
@@ -599,9 +599,32 @@ if n_elements(ipos) ne 0 then begin
 		draw,x0+ipos/bin*[1,1],dd+[0,ny2],line=1
 	endfor
 endif
+if keyword_set(get_ipos) then begin
+	wshow
+	print,'select x-position'
+	cursor,px,py,3,/dev
+	ix1 = (px-dd) mod (nx2+dd) &	j1 = (py-dd)
+	for j=0,nsp-1 do begin
+		x0 = dd+j*(nx2+dd)
+		plots,x0+ix1*[1,1],dd+[0,ny2],line=1,/dev
+	endfor
+	ix1 = ix1*bin
+endif
+if keyword_set(get_box) then begin
+	wshow
+	print,'select region...'
+	wdok,'Select a region to correct I->QUV crosstalk',xpos=500,ypos=400
+	box_cur1, x0c, y0c, nxc, nyc
+	x0c = (x0c-dd) mod (nx2+dd) &	y0c = (y0c-dd)
+	get_box = [x0c, y0c, nxc, nyc]
+	for j=0,nsp-1 do begin
+		x0 = dd+j*(nx2+dd) + x0c
+		plots,x0+nxc*[0,1,1,0,0],dd+y0c+[0,0,nyc,nyc,0],line=1,/dev, col=0
+	endfor
+	get_box = get_box*bin
+endif
 
 end
-
 
 ;********************************************************************
 function sp_demodulate,sps,nrot,th_offset,roll_shutter=roll_shutter
@@ -1078,7 +1101,7 @@ function dinfo_st
 		adj_dstpol: 1,		$ ; if 1, adjust DST pol.parms using Zeemen in sunspot 
 		correct_I2quv: 1,	$ ; 0 - no correction, 1 - use i2quv[2,3],  2 - correct with own IQUV
 		I2quv_xrange: [0,0],    $ ; x-range for correct_I2quv
-        I2quv_yrange: [0,0],    $ ; y-range for correct_I2quv
+        	I2quv_yrange: [0,0],    $ ; y-range for correct_I2quv
 		com:	''		$ ; comments
 		}
 	return,dinfo

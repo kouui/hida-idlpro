@@ -343,7 +343,7 @@ end
 function mm_dst, zd, ha, az, incli, telpos, $
                 xn, tn, xc, tc,             $
                 sc=sc,delta_en=delta_en,t_en=t_en,delta_ex=delta_ex,t_ex=t_ex, $
-                hsp=hsp,qin=qin
+                hsp=hsp,qin=qin,ao=ao
 
 lat=36.252/!radeg		;latitude of Hida observatory
 
@@ -361,7 +361,7 @@ incli1 = +(incli+0.5*!pi)		; <== originary +incli
 if qin eq 'slit' then begin
 	; +Q on the sun is perpendicular to the slit
 	R_sun2ew=muellermatrix_rot(-incli1)	
-	print,'+Q in slit direction'
+	;print,'+Q in slit direction'
 endif else begin
 	; +Q on the sun is east-west on celestial sphere
 	R_sun2ew=[$
@@ -418,29 +418,15 @@ R_N=muellermatrix_rot(phi_N)
 R_C=muellermatrix_rot(phi_C)
 R_pl=muellermatrix_rot(phi_v)
 
+if not keyword_set(ao) then begin
 mat = m_s ## R_pl ## D_ex ## M_C ## M_G ## R_C ## M_N ## M_P ## D_en## R_N ## R_sun2ew
-
+endif else begin
+mat = m_s ## R_pl ## ao ## D_ex ## M_C ## M_G ## R_C ## M_N ## M_P ## D_en## R_N ## R_sun2ew
+endelse
 if keyword_set(hsp) then begin
     THROW_ERROR, "Meuller Matrix for image rotator in hsp is not yet calibrated!!"
 endif
 
 return, mat
 
-END
-
-;------------------------------------------------------------------------
-;; UPDATE mmdst
-FUNCTION UPDATE_MMDST, dst, xn, tn, xc, tc, sc, th_vs=th_vs
-
-;;	zd = (dst[0,1]+dst[1,1]/60.+dst[2,1]/3600.)/180.*!pi
-;;	ha = (dst[0,0]+dst[1,0]/60.+dst[2,0]/3600.)/24.*2*!pi	; [hh,mm,ss] -> rad
-;;	if ha gt !pi then ha = ha-2*!pi
-;;	az = (dst[0,9]+dst[1,9]/60.+dst[2,9]/3600.)/180.*!pi
-;;	incli = (dst[0,4]+dst[1,4]/60.+dst[2,4]/3600.)/180.*!pi
-
-  ;;  mm = mm_dst(zd, ha, az, incli, telpos, xn, tn, xc, tc, sc=sc, qin='slit')
-  	mm = mm_dst(dst.zd, dst.ha, dst.az, dst.incli, dst.pos, xn, tn, xc, tc, sc=sc, qin='slit')
-    if keyword_set(th_vs) then mm = muellermatrix_rot(th_vs*!dtor) ## mm
-
-    return, mm
 END

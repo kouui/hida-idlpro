@@ -16,8 +16,8 @@ _NCORE = 4
 ; 
 
 obs = 'He.ar.2.1'
-obs = 'He.flatmean'
-obs = 'He.flat'
+;obs = 'He.flatmean'
+;obs = 'He.flat'
 ;obs = 'He.ar.2.3'
 ;obs = 'He.ar.5.1'
 ;obs = 'He.ar.2.2'
@@ -69,7 +69,7 @@ case obs of
 	_force_pcal_init = 0b
 	_path_pcal_init = path.workdir + path.outdir + '/../ar.2.2/'  +	_wave0+'.pcal.sav'
 	my_i2quv = [0, 0., 0]   ; WEST with WEST pcal
-	pmax0 = 0.002 
+	pmax0 = 0.01 
 	end
 ;;----[He.ar.2.3]----------------------------------------
 	'He.ar.2.3': begin

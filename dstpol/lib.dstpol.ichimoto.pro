@@ -553,7 +553,7 @@ end
 
 ;********************************************************************
 pro dispiquvr,i,q,u,v,r,bin=bin,pmax=pmax,coms=coms,ialog=ialog,wid=wid,ipos=ipos,dd=dd, $
-	isigma=isigma,title=title,get_ipos=ix1,get_box=get_box
+	isigma=isigma,title=title,get_ipos=get_ipos,get_box=get_box
 
 if not keyword_set(bin) then bin=2
 if not keyword_set(pmax) then pmax=0.01
@@ -609,6 +609,7 @@ if keyword_set(get_ipos) then begin
 		plots,x0+ix1*[1,1],dd+[0,ny2],line=1,/dev
 	endfor
 	ix1 = ix1*bin
+	get_ipos = ix1
 endif
 if keyword_set(get_box) then begin
 	wshow
@@ -1034,6 +1035,53 @@ plot,wln,vprof,pos=box+yoff*(0.1+wy1*0),/norm,/noerase,xtitle='wavelength [nm]',
 oplot,xr,[0,0],line=1
 xyouts,wln[20],yr[1]*0.6,'V/Ic',/data,chars=2.5
 
+
+end
+
+;****************************z**************************************************
+function contizero1,prof0,cfit=cfit,iiex=iiex
+; make continuum base zero by iterative fit upto 3rd poly
+;  iiex  - data points excluded (line signal) 
+
+prof = prof0
+n = n_elements(prof)
+prof = reform(prof,n)
+x = findgen(n)
+
+c1 = poly_fit(x,prof,1)
+fit1 = poly(x,c1) &	prof = prof-fit1 &	rms1 = stddev(prof)
+;plot,prof
+ii1 = where(abs(prof) gt rms1*3) &	prof[ii1] = 0.
+c2 = poly_fit(x,prof,2)
+fit2 = poly(x,c2) &	prof = prof-fit2 &	rms2 = stddev(prof)
+ii2 = where(abs(prof) gt rms2*3) &	prof[ii2] = 0.
+c3 = poly_fit(x,prof,3)
+fit3 = poly(x,c3) &	prof = prof-fit3 &	rms3 = stddev(prof)
+ii3 = where(abs(prof) gt rms3*2) &	prof[ii3] = 0.
+c4 = poly_fit(x,prof,3)
+fit4 = poly(x,c4) &	prof = prof-fit4 &	rms3 = stddev(prof)
+
+cfit = fit1 + fit2 + fit3 + fit4
+iiex = [ii1,ii2,ii3]
+iiex = iiex[uniq(iiex,sort(iiex))]
+
+;plot,prof0,col=150
+;oplot,cfit
+
+return,prof0-cfit
+
+end
+
+;****************************z**************************************************
+function contizero_s3d,s
+;	s[*,*,4]
+sc = s
+imgsize,s,nx,ny,n4
+for k=1,3 do begin
+	for i=0,nx-1 do sc[i,*,k] = contizero1(s[i,*,k],iiex=iie)
+endfor
+
+return,sc
 
 end
 

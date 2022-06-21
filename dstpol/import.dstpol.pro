@@ -4,6 +4,7 @@
 @lib.dstpol.mmdst_adjust
 @lib.dstpol.thoffset
 @lib.dstpol.ichimoto
+@lib.dstpol.defringequv
 @lib.dstpol.parallel
 @lib.dstpol.wliquvmap
 @lib.dstpol.kouui  ; some modified functions

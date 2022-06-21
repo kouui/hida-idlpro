@@ -260,3 +260,4 @@ widget_control, base, /realize
 XMANAGER, 'i2quvgui', base, EVENT_HANDLER='event_handler', /NO_BLOCK
 
 END
+

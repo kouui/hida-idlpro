@@ -12,6 +12,7 @@
 ;  	2022.05.02  u.k.    added parallel data processing with IDL bridge and s0 caching
 ;	2022.05.08	k.i.,u.k.,	get_th_offset()
 ;	2022.05.08	k.i.,u.k.,	correct_Icrosstk with region selection
+;   2022.06.21  u.k.    added defringequv
 ;---------------------------------------------------------------------------
 
 ;        ['white'  , 'green'  , 'red'    , 'yellow']
@@ -64,7 +65,8 @@ menu = ['0: average drkflt', $		; average dark & flat, save in workdir
 	'11: wl-IQUVmap scan', $      ; make IQUV map with wavelength scan
 	'12: qlmap all folder', $      ; widget selection to view qlmap in all data folders
 	'13: obscal para', $     ; parallel data processing with IDL bridge and s0 caching
-	'14: obscal para clear' $ ; clear IDL_BRIDGE objects
+	'14: obscal para clear', $ ; clear IDL_BRIDGE objects
+	'15: defringe quv'      $ ; defringe quv using continuum spectra
 	]
 
 step = smenu(menu,xpos=500,ypos=200,title='DST polcal')
@@ -84,6 +86,7 @@ case step of
 	12: goto,qlAll		; widget selection to view qlmap in all data folders
 	13: goto,obscalpara     ; parallel data processing with IDL bridge and s0 cachin
 	14: goto,obscalparaclear ; clear IDL_BRIDGE objects
+	15: goto, defringequv   ; defringe quv using continuum spectra
 endcase
 
 
@@ -544,6 +547,7 @@ stop
 
 pltprof:
 ;***************  plot profiles *****************
+throw_error,"[ERROR] this is the old version pltprof, to be updated!!!"
 print,'>> plot Stokes profiles <<'
 diri = path.workdir+path.outdir
 savfile1 = dialog_pickfile(path=diri,filter='*.sav')
@@ -576,7 +580,9 @@ endwhile
 
 iquvmap:
 ;***************  show iquvmap *****************
-files = findfile(path.workdir+path.outdir+'sav/*.sav')
+files = findfile(path.workdir+path.outdir+'sav.sd/*.sd.sav', count=nf)
+if nf eq 0 then files = findfile(path.workdir+path.outdir+'sav.s/*.sav', count=nf)
+
 nf = n_elements(files)
 nstep = dinfo.nstep
 dd=2
@@ -938,3 +944,70 @@ UNDEFINE, brs
 
 stop
 
+;;----------------------------------------------------------------------------------------
+;; defringe quv with continuum spectra
+
+defringequv:
+;***** defringe quv of s[*,*,4]	*************************** 
+outdir = path.workdir+path.outdir
+gifdir = outdir+'iquv/'
+if not file_test(gifdir+'sd/') then file_mkdir,gifdir+'sd/'
+sdir = outdir+'sav.s/'
+savdir = outdir+'sav.sd/'
+if not file_test(savdir) then file_mkdir,savdir
+n_conti_fringe = 2
+ix = 130
+
+sfiles = findfile(sdir+'*.sav', count=nf)
+if nf eq 0 then begin
+	print,'No s-file found!'
+	stop
+endif
+restore,sfiles[0]	; -> s[*,*,4],pcal,dinfo,h,xprof,dx
+camera = fits_keyval(h,'CAMERA')
+wdok, 'defringe quv of camera '+camera+' (current defringe setup is for GOLDEYE only)'
+bin = binfact(s)
+if dinfo.div eq '' then pmax = pmax0 *max(s0[*,*,0]) else pmax = pmax0
+
+calibrate_defringequv_, sdir, bin, pmax, ix=ix, $
+    n_conti_fringe=n_conti_fringe, pyc=pyc, period=period, peri0=peri0, $
+    xrflat=xrflat, isreverse=isreverse
+loadct,0
+for jj =0, n_elements(savfiles)-1 do begin
+    sfile1 = sfiles[jj]
+    restore, sfile1;, /verbose
+    for j=1,3 do s[*,*,j] /= s[*,*,0]
+    s = contizero_s3d(s)
+    UNDEFINE,pcal, dinfo, h, xprof, dx   ; undefine unecessary variables
+    ;for i=1,3 do s[*,*,i] /= s[*,*,0]
+    ss = size(s)
+    nx = ss[1]
+    ny = ss[2]
+    sd    = fltarr(nx,ny,4)
+    sd[*,*,0] = s[*,*,0]
+    frin3d = fltarr(nx,ny,4)
+    for i=1,3 do begin
+        defringe_s2d_,reform(s[*,*,i]), n_conti_fringe,pyc, period, peri0, xrflat, isreverse, fringe=fringe, out=out
+        sd[*,*,i] = out *s[*,*,0]
+        frin3d[*,*,i] = fringe
+    endfor
+
+    dispiquvr,s,bin=bin,pmax=pmax,wid=15
+    if jj eq 0 then wshow
+    dispiquvr,sd,bin=bin,pmax=pmax,wid=16
+    if jj eq 0 then wshow
+    case _IMG_FMT of
+	'png':  WRITE_PNG, gifdir+'sd/sd.'+fnam+'.png', TVRD(/TRUE)
+	'gif':  win2gif,gifdir+'sd/sd.'+fnam+'.gif'
+    endcase
+    
+    filename_sep,sfile1,di,fnam,ex
+    outfile = savdir+fnam+'.sd.sav'
+    s = sd
+    save,s,pcal,dinfo,h,xprof,dx,file=outfile
+    print,jj,'  defringed s[*,*,4] saved in ',outfile
+
+endfor
+
+
+stop

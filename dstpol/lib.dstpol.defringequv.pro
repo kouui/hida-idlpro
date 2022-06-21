@@ -1,15 +1,18 @@
-@lib.dstpol.mmdst
-@lib.dstpol.mmdst_lib
-@lib.dstpol.ichimoto.pro
+;@lib.dstpol.mmdst;df
+;@lib.dstpol.mmdst_lib
+;@lib.dstpol.ichimoto.pro
 
+;----------------------------------------------------------------------------------------
 
 function cos_, x, am, peri, ph
     return, am * cos( x*(2*!pi)/peri + ph )
 end
+;----------------------------------------------------------------------------------------
 
 function model_cos_, x, par
     return, par[0] * cos( x*(2*!pi)/par[1] + par[2] )
 end
+;----------------------------------------------------------------------------------------
 
 pro fringe_cos_, X, A, F
     am = A[0]
@@ -18,6 +21,7 @@ pro fringe_cos_, X, A, F
     F = cos_(X,am,peri,ph)
 
 end
+;----------------------------------------------------------------------------------------
 
 function frin1d2amph_fft_, arr1d, nfreq
 
@@ -27,12 +31,14 @@ function frin1d2amph_fft_, arr1d, nfreq
     ph  = atan( real_part(f) / IMAGINARY(f))
     return, [2*amp, ph+!pi]   ; phase deviated 1px
 end
+;----------------------------------------------------------------------------------------
 
 function frin1d2amph_mpfit_, x, arr1d, parinit
     err = 1E-5
     ret = mpfitfun('model_cos_',x,arr1d,err,parinit,/quiet)
     return,ret
 end
+;----------------------------------------------------------------------------------------
 
 function find_max_poly2d_, x, y, dd=dd
     if not keyword_set(dd) then dd=10
@@ -45,6 +51,7 @@ function find_max_poly2d_, x, y, dd=dd
     c = poly_fit(xx,yy,2)
     return, c[1] / (-2.0 * c[2])
 end
+;----------------------------------------------------------------------------------------
 
 function conti2fringe_, conti, nfreq, xr
 
@@ -65,6 +72,7 @@ function conti2fringe_, conti, nfreq, xr
 
 end
 
+;----------------------------------------------------------------------------------------
 
 pro calibrate_defringequv_, savdir, bin, pmax, n_conti_fringe=n_conti_fringe, divi=divi, $
     pyc=pyc, period=period, peri0=peri0, xrflat=xrflat, isreverse=isreverse, ix=ix
@@ -216,7 +224,7 @@ window, 13, xs=800, ys=600
 plot, peris, ccorrs, xtitle='fringe period', title='cross correlation with original profile'
 
 end
-
+;----------------------------------------------------------------------------------------
 pro defringe_s2d_, quv2d, n_conti_fringe,pyc, period, peri0, xrflat, isreverse, fringe=fringe, out=out
     
     ss = size(quv2d)
@@ -249,7 +257,10 @@ pro defringe_s2d_, quv2d, n_conti_fringe,pyc, period, peri0, xrflat, isreverse, 
         fringe = reverse(fringe,2)
     endif
 end
-;; 
+;----------------------------------------------------------------------------------------
+
+;;
+PRO TEST_CASE_DEFRINGEQUV_ 
 n_conti_fringe = 2
 ix = 130
 savdir = '/nwork/ichimoto/DST/sp/20220529_He/df.1.6/'
